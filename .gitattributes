@@ -1,0 +1,41 @@
+# ===== Line endings =====
+# Normalize all text files to LF on commit
+* text=auto eol=lf
+
+# Windows shell scripts keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# ===== Source code — text diff =====
+*.kt        text diff=kotlin
+*.kts       text diff=kotlin
+*.java      text diff=java
+*.xml       text diff=xml
+*.json      text
+*.md        text
+*.txt       text
+*.properties text
+*.pro       text
+*.toml      text
+
+# ===== Binaries — no diff, no merge =====
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.webp      binary
+*.svg       text
+
+# APK / AAB / keystores — never diff
+*.apk       binary
+*.aab       binary
+*.jks       binary
+*.keystore  binary
+
+# ===== Gradle wrapper binary =====
+gradlew     text eol=lf
+gradlew.bat text eol=crlf
+
+# ===== Room schema exports — treat as text =====
+*.json linguist-language=JSON
