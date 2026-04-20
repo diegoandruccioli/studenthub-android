@@ -47,6 +47,19 @@ CLAUDE.md
 .claude/
 backup/
 
+# ===== LaTeX compilati =====
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.pdf
+docs/relazione/img/.gitkeep
+
 # ===== Kotlin / Java compiled =====
 *.class
 

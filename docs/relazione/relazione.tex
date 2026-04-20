@@ -1,0 +1,174 @@
+\documentclass[a4paper,12pt]{report}
+
+% Codifica e lingua
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[italian]{babel}
+\usepackage{float}
+
+% Formattazione
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage[all]{hypcap}
+\usepackage{url}
+\usepackage{listings}
+\usepackage{xcolor}
+
+% Kotlin syntax highlighting
+\definecolor{kotlinpurple}{rgb}{0.4,0.0,0.6}
+\definecolor{kotlinblue}{rgb}{0.0,0.3,0.7}
+\definecolor{kotlingreen}{rgb}{0.1,0.5,0.2}
+
+\lstdefinelanguage{Kotlin}{
+  keywords={fun, val, var, class, object, interface, data, sealed, enum, when, if, else,
+            return, override, private, public, internal, suspend, flow, collect, emit,
+            launch, async, coroutineScope, viewModelScope, companion, by, lazy, init,
+            null, true, false, is, as, in, out, abstract, open, final, override},
+  keywordstyle=\color{kotlinpurple}\bfseries,
+  stringstyle=\color{kotlinblue},
+  commentstyle=\color{kotlingreen}\itshape,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]",
+  basicstyle=\ttfamily\footnotesize,
+  tabsize=4,
+  showspaces=false,
+  showstringspaces=false,
+  frame=single,
+  breaklines=true,
+  postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space},
+}
+\lstset{language=Kotlin}
+
+% Link
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=blue,
+    pdftitle={Relazione di Progetto - StudentHub},
+}
+
+% Dati documento
+\title{\textbf{Relazione di Progetto \\ ``StudentHub''}}
+\author{Diego Andruccioli}
+\date{Anno Accademico 2025/2026}
+
+% ============================================================
+\begin{document}
+
+\maketitle
+
+% ── SOMMARIO ────────────────────────────────────────────────
+\chapter*{Sommario}
+% [DA COMPLETARE — scrivere a fine progetto]
+
+\tableofcontents
+
+% ── CAPITOLO 1 — DESCRIZIONE E REQUISITI ────────────────────
+\chapter{Descrizione e Requisiti}
+
+\section{Contesto e Dominio}
+% [DA COMPLETARE]
+
+\section{Requisiti Funzionali}
+% [DA COMPLETARE — aggiornare man mano che le feature vengono implementate]
+\begin{itemize}
+    \item % feature 1
+\end{itemize}
+
+\section{Requisiti Non Funzionali e Vincoli d'Esame}
+% [DA COMPLETARE]
+\begin{itemize}
+    \item Sviluppo nativo in Kotlin, senza codice Java legacy.
+    \item Struttura del codice suddivisa in moduli secondo il principio di Separation of Concerns (moduli \texttt{:domain}, \texttt{:data}, \texttt{:ui}, \texttt{:app}).
+    \item Utilizzo corretto dei componenti Lifecycle: \texttt{ViewModel} e \texttt{StateFlow}/\texttt{LiveData}.
+    \item Gestione dell'asincronia tramite Kotlin Coroutines, con separazione netta tra Main Thread e Background Thread.
+    \item Salvataggio dei dati in storage locale (Room per dati strutturati, DataStore per preferenze).
+    \item Consegna di una relazione finale scritta.
+\end{itemize}
+
+% ── CAPITOLO 2 — SPECIFICHE TECNICHE ────────────────────────
+\chapter{Specifiche Tecniche}
+
+\section{Linguaggio e IDE}
+% [DA COMPLETARE]
+
+\section{Gestione Dipendenze}
+% [DA COMPLETARE]
+
+\section{Core Libraries}
+% [DA COMPLETARE — aggiornare man mano che le librerie vengono integrate]
+
+% ── CAPITOLO 3 — ARCHITETTURA ───────────────────────────────
+\chapter{Architettura}
+
+\section{Clean Architecture}
+% [DA COMPLETARE]
+
+\section{Pattern MVVM}
+% [DA COMPLETARE]
+
+\section{Repository Pattern}
+% [DA COMPLETARE]
+
+\section{Dependency Injection (RepositoryProvider manuale)}
+% [DA COMPLETARE]
+
+% ── CAPITOLO 4 — DESIGN DETTAGLIATO ─────────────────────────
+\chapter{Design Dettagliato}
+
+% Formato obbligatorio per ogni problema: \subsubsection + \paragraph{Problema} + \paragraph{Soluzione}
+% NON inserire UML — solo testo e snippet Kotlin
+
+% [DA COMPLETARE — ogni problema viene aggiunto al termine dell'implementazione corrispondente]
+
+% ── CAPITOLO 5 — SOLUZIONI DI SVILUPPO ──────────────────────
+\chapter{Soluzioni di Sviluppo}
+
+\section{Concorrenza e Coroutines}
+% [DA COMPLETARE]
+
+\section{ViewBinding}
+% [DA COMPLETARE]
+
+\section{Material Design 3}
+% [DA COMPLETARE]
+
+\section{RecyclerView e DiffUtil}
+% [DA COMPLETARE]
+
+% ── CAPITOLO 6 — SVILUPPI FUTURI ────────────────────────────
+\chapter{Sviluppi Futuri}
+
+\section{Notifiche Push (Firebase Cloud Messaging)}
+% [DA COMPLETARE]
+
+\section{Widget e WearOS}
+% [DA COMPLETARE]
+
+\section{Desktop Windowing e Responsiveness}
+% [DA COMPLETARE]
+
+% ── APPENDICE — GUIDA UTENTE ────────────────────────────────
+\appendix
+
+\chapter{Guida Utente}
+
+\section{Installazione e Avvio}
+% [DA COMPLETARE]
+
+\section{Primo Accesso e Autenticazione}
+% [DA COMPLETARE]
+
+\section{Navigazione della Dashboard Principale}
+% [DA COMPLETARE]
+
+\section{Inserimento di un Nuovo Esame}
+% [DA COMPLETARE]
+
+\section{Gestione Profilo e Disconnessione}
+% [DA COMPLETARE]
+
+\end{document}
