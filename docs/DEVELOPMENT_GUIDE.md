@@ -6,6 +6,15 @@
 
 ## Stato avanzamento
 
+### Backend (prerequisiti — da completare prima dello sviluppo mobile)
+
+| # | Task backend | Responsabile | Stato |
+|---|---|---|---|
+| B1 | Migration `updated_at` su tabella `esami` | — | ✅ Completato |
+| B2 | ~~Fix CORS per richieste native Android~~ | — | N/A — CORS non si applica a Retrofit/OkHttp |
+
+### Android
+
 | # | Feature | Responsabile | Stato |
 |---|---|---|---|
 | 1 | Login + Registrazione | — | ⬜ Da fare |
@@ -15,9 +24,47 @@
 | 5 | Gamification (livello, badge, leaderboard) | — | ⬜ Da fare |
 | 6 | Impostazioni | — | ⬜ Da fare |
 | 7 | Network layer (Retrofit + CookieJar) | — | ⬜ Da fare |
-| 8 | Modifica CORS backend | — | ⬜ Da fare |
+| 8 | Offline-first sync (WorkManager `SyncExamsWorker`) | — | ⬜ Da fare |
+| 9 | Notifiche rank + permesso runtime (WorkManager `LeaderboardCheckWorker`) | — | ⬜ Da fare |
 
 **Legenda**: ⬜ Da fare · 🔄 In corso · ✅ Completato
+
+---
+
+## Fase 0 — Prerequisiti backend (da completare prima di iniziare lo sviluppo Android)
+
+Queste due modifiche devono essere applicate al repo `github.com/diegoandruccioli/StudentHub`
+prima di procedere con l'integrazione network sull'app mobile.
+
+### B1 — Migration: aggiunta colonna `updated_at` su `esami`
+
+**Perché**: senza un timestamp di ultima modifica non è possibile applicare la strategia
+last-write-wins per la risoluzione dei conflitti offline/online (es. stesso esame modificato
+dal telefono offline e dalla piattaforma web prima della sincronizzazione).
+
+**Impatto sulla piattaforma web**: nessuno — tutte le query esistenti usano colonne esplicite;
+`updated_at` si popola e si aggiorna automaticamente via MySQL senza modifiche al codice.
+
+```sql
+ALTER TABLE esami
+ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+AFTER created_at;
+```
+
+Aggiornare anche `backend/sql/init.sql` per mantenere lo script di inizializzazione allineato:
+
+```sql
+-- nella CREATE TABLE esami, aggiungere dopo created_at:
+updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+```
+
+---
+
+### B2 — Fix CORS ~~per richieste native Android~~ — NON necessario
+
+**CORS è un meccanismo browser-only.** Retrofit/OkHttp non invia l'header `Origin` e non controlla
+gli header `Access-Control-*` nella risposta. Il backend risponde normalmente alle richieste Android
+senza alcuna modifica. Il `CORS_ORIGIN` nel `.env` serve solo al frontend web.
 
 ---
 
@@ -75,57 +122,21 @@ CookieJar inietta: Cookie: token=abc123...
 
 ---
 
-## Problema critico: CORS backend
+## Indirizzi IP backend — riferimento emulatore
 
-### Situazione attuale
+Il backend Docker è esposto sulla porta **3010** dell'host. L'emulatore Android raggiunge la
+macchina host all'indirizzo `10.0.2.2`.
 
-Il backend ha il CORS configurato in modo fisso per il frontend web:
-
-```typescript
-// backend/server.ts — STATO ATTUALE (da modificare)
-app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true
-}));
-```
-
-Questo blocca qualsiasi richiesta che non provenga esattamente da `http://localhost:5173`. Un'app Android non invia un `Origin` uguale a quello, quindi in ambiente di sviluppo locale (emulatore o dispositivo fisico sulla stessa rete) le richieste vengono rifiutate.
-
-### Modifica necessaria nel backend
-
-Chi lavora sul backend deve modificare `backend/server.ts` prima che l'integrazione Android possa funzionare:
-
-```typescript
-// backend/server.ts — DA APPLICARE
-const allowedOrigins = [
-  'http://localhost:5173',   // frontend web
-  'http://10.0.2.2:3000',   // emulatore Android (mappa a localhost della macchina host)
-];
-
-app.use(cors({
-  origin: (origin, callback) => {
-    // origin è undefined per richieste native (app mobile) — le lasciamo passare
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('CORS non permesso'));
-    }
-  },
-  credentials: true
-}));
-```
-
-> **Nota**: le app native Android non inviano sempre un header `Origin`. OkHttp non lo aggiunge di default. Per questo il controllo `!origin` è necessario.
-
-### Indirizzi IP da sapere
-
-| Contesto | Indirizzo da usare nell'app Android |
+| Contesto | URL base da usare nell'app Android |
 |---|---|
-| Emulatore Android Studio | `http://10.0.2.2:3000` |
-| Dispositivo fisico (stessa rete Wi-Fi) | `http://<IP_LOCALE_PC>:3000` (es. `192.168.1.x`) |
+| Emulatore Android Studio | `http://10.0.2.2:3010` |
+| Dispositivo fisico (stessa rete Wi-Fi) | `http://<IP_LOCALE_PC>:3010` (es. `192.168.1.x`) |
 | Produzione | TBD — URL pubblico del server |
 
-Configura l'URL base in un file `local.properties` o in una costante di build (`BuildConfig`) — mai hardcoded nel codice.
+Android 9+ blocca HTTP in chiaro per default. Il file `app/src/main/res/xml/network_security_config.xml`
+già presente nel progetto consente il traffico HTTP verso `10.0.2.2`.
+
+Configura l'URL base in `local.properties` o tramite `BuildConfig` — mai hardcoded nel codice.
 
 ---
 
@@ -174,15 +185,83 @@ Implementa tutto con Room. L'app funziona offline; il backend si aggiunge dopo.
 ### Fase 3 — Integrazione backend
 
 Questa fase si aggiunge **sopra** la Fase 1 senza romperla, grazie al pattern Repository.
+**Prerequisiti backend B1 e B2 devono essere completati prima di iniziare questa fase.**
 
 **7. Network layer**
 - Aggiungere Retrofit 2 + OkHttp al modulo `:data`
 - Implementare `CookieJar` custom + `SessionDataStore`
-- Creare `AuthApiService`, `EsameApiService`, ecc. (interfacce Retrofit)
-- Il `EsameRepositoryImpl` diventa: prova remote → fallback locale (o viceversa)
+- Creare `AuthApiService`, `EsameApiService`, `GamificationApiService` (interfacce Retrofit)
+- `EsameRepositoryImpl`: strategia offline-first (vedi sotto)
 
-**8. Modifica CORS backend** (prerequisito della Fase 3)
-- Vedi sezione sopra
+**8. Offline-first sync con WorkManager**
+
+Strategia: Room è sempre la fonte di verità locale. Il backend è la fonte di verità remota.
+
+*Inserimento / modifica esame:*
+```
+Utente salva esame
+    ↓
+Salva in Room con flag pending_sync = true
+    ↓
+Rete disponibile?  ──Sì──→  POST/PUT /api/exams → ricevi risposta con xp aggiornato
+    │                            ↓
+    │                       Aggiorna Room con dati server (xp_guadagnati, updated_at)
+    │                       Imposta pending_sync = false
+    │
+    └──No──→  Enqueue SyncExamsWorker con constraint NetworkType.CONNECTED
+                    ↓ (appena torna la rete)
+              Per ogni record con pending_sync = true:
+                  Confronta updated_at locale vs remoto (last-write-wins)
+                  Invia la versione più recente al server
+                  Aggiorna Room con la risposta
+```
+
+*Campi aggiuntivi necessari su `EsameEntity` (Room):*
+- `pendingSync: Boolean = false` — segna i record da sincronizzare
+- `updatedAt: Long` — epoch ms, usato per last-write-wins contro `updated_at` del server
+
+*Worker:*
+```kotlin
+// :data/worker/SyncExamsWorker.kt
+class SyncExamsWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
+    // Legge da Room tutti i record con pendingSync = true
+    // Per ognuno: POST o PUT verso /api/exams con gestione last-write-wins
+    // In caso di successo: aggiorna il record in Room e imposta pendingSync = false
+}
+```
+
+**9. Notifiche rank gamification con WorkManager**
+
+*Flusso:*
+```
+LeaderboardCheckWorker (periodico, solo con rete)
+    ↓
+GET /api/users/leaderboard
+    ↓
+Confronta rank ricevuto con rank salvato in DataStore
+    ↓
+Rank cambiato? → Emetti notifica locale ("Sei salito al posto N°X!")
+               → Aggiorna rank in DataStore
+```
+
+*Permesso runtime (Android 13+):* `POST_NOTIFICATIONS` — va richiesto al primo avvio
+dell'app, spiegando all'utente il motivo (aggiornamenti sulla classifica gamification).
+
+*Worker:*
+```kotlin
+// :data/worker/LeaderboardCheckWorker.kt
+class LeaderboardCheckWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
+    // Constraints: NetworkType.CONNECTED
+    // Periodicità: ogni 15 minuti (minimo di WorkManager)
+    // Confronta rank con DataStore, emette NotificationCompat se cambiato
+}
+```
+
+*Requisiti esame coperti da questa fase:*
+- **Opzionale 1** (persistenza locale Room) ✅ — già dalla Fase 1
+- **Opzionale 2** (runtime permission) ✅ — permesso `POST_NOTIFICATIONS`
+- **Opzionale 3** (servizi in background) ✅ — `SyncExamsWorker` + `LeaderboardCheckWorker`
+- **Requisito obbligatorio networking** ✅ — almeno 2 chiamate API remote
 
 ---
 
@@ -220,12 +299,16 @@ Fragment → ViewModel.stateFlow.collect()
 - **RecyclerView sempre con `DiffUtil`**
 - **Room Entity mai oltre il layer `:data`** — usa domain model (`Esame`, non `EsameEntity`)
 - **Use Case = 1 classe, 1 responsabilità** — costruttore riceve solo il repository necessario
+- **MVVM rigoroso** — il ViewModel non contiene logica di business; la View (Fragment/Activity) non contiene logica di stato; tutto il binding UI passa da `StateFlow.collect()`
+- **Repository pulito** — Use Case e ViewModel non toccano mai direttamente Room, Retrofit o DataStore; accedono solo all'interfaccia Repository definita nel modulo `:domain`
+- **Material You (M3)** — usare componenti Material Design 3; applicare Dynamic Color in modo che i colori dell'app si adattino al tema del dispositivo
+- **Unit test obbligatori** — JUnit 4 + Mockito per ogni Use Case e ViewModel; i test vanno nel modulo corretto (`:domain/test`, `:ui/test`); senza test il codice non è considerato completo
 
 ---
 
 ## API Backend — riferimento rapido
 
-Base URL: `http://10.0.2.2:3000/api` (emulatore) · tutte le risposte sono JSON in italiano
+Base URL: `http://10.0.2.2:3010/api` (emulatore) · tutte le risposte sono JSON in italiano
 
 | Endpoint | Metodo | Auth | Note |
 |---|---|---|---|
