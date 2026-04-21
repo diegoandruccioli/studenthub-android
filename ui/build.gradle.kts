@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
 }
 
 android {
@@ -16,7 +17,6 @@ android {
 
     defaultConfig {
         minSdk = 31
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
@@ -34,6 +34,9 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+    kotlinOptions {
+        jvmTarget = "11"
+    }
 }
 
 dependencies {
@@ -46,12 +49,14 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.fragment.ktx)
     implementation(libs.androidx.recyclerview)
-
-    //Versione vecchia
-    //implementation("com.github.bumptech.glide:glide:5.0.5")
-    //implementation ("androidx.cardview:cardview:1.0.0")
-    implementation (libs.androidx.cardview)
+    implementation(libs.androidx.cardview)
     implementation(libs.glide)
+
+    // Lifecycle
+    implementation(libs.lifecycle.viewmodel.ktx)
+    implementation(libs.lifecycle.livedata.ktx)
+    implementation(libs.lifecycle.runtime.ktx)
+    implementation(libs.coroutines.android)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
 }
 
 android {
@@ -37,6 +38,9 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+    kotlinOptions {
+        jvmTarget = "11"
+    }
 }
 
 dependencies {
@@ -48,15 +52,9 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.activity)
-    implementation(libs.androidx.constraintlayout)
-    implementation(libs.fragment.ktx)
-    implementation(libs.androidx.recyclerview)
 
-    //Versione vecchia
-    //implementation("com.github.bumptech.glide:glide:5.0.5")
-    //implementation ("androidx.cardview:cardview:1.0.0")
-    implementation (libs.androidx.cardview)
-    implementation(libs.glide)
+    // WorkManager
+    implementation(libs.workmanager.ktx)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
