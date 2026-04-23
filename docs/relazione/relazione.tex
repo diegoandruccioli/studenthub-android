@@ -20,12 +20,13 @@
 \definecolor{kotlinpurple}{rgb}{0.4,0.0,0.6}
 \definecolor{kotlinblue}{rgb}{0.0,0.3,0.7}
 \definecolor{kotlingreen}{rgb}{0.1,0.5,0.2}
+\definecolor{kotlingray}{rgb}{0.5,0.5,0.5}
 
 \lstdefinelanguage{Kotlin}{
   keywords={fun, val, var, class, object, interface, data, sealed, enum, when, if, else,
             return, override, private, public, internal, suspend, flow, collect, emit,
             launch, async, coroutineScope, viewModelScope, companion, by, lazy, init,
-            null, true, false, is, as, in, out, abstract, open, final, override},
+            null, true, false, is, as, in, out, abstract, open, final},
   keywordstyle=\color{kotlinpurple}\bfseries,
   stringstyle=\color{kotlinblue},
   commentstyle=\color{kotlingreen}\itshape,
@@ -62,15 +63,18 @@
 
 % ── SOMMARIO ────────────────────────────────────────────────
 \chapter*{Sommario}
-% [DA COMPLETARE — scrivere a fine progetto]
+% [DA COMPLETARE — breve descrizione del progetto, stack tecnologico principale,
+%  struttura della relazione. ~150–200 parole. Scrivere a fine progetto.]
 
 \tableofcontents
 
-% ── CAPITOLO 1 — DESCRIZIONE E REQUISITI ────────────────────
-\chapter{Descrizione e Requisiti}
+% ── CAPITOLO 1 — OBIETTIVI E REQUISITI ──────────────────────
+\chapter{Obiettivi e Requisiti}
 
-\section{Contesto e Dominio}
-% [DA COMPLETARE]
+\section{Descrizione del Progetto}
+% [DA COMPLETARE — cos'è StudentHub, a chi è rivolto, quale problema risolve.
+%  Presentare la componente di gestione carriera (esami, CFU, media) e la componente
+%  di gamification (XP, livelli, badge). NON scendere in dettagli tecnici.]
 
 \section{Requisiti Funzionali}
 % [DA COMPLETARE — aggiornare man mano che le feature vengono implementate]
@@ -78,97 +82,106 @@
     \item % feature 1
 \end{itemize}
 
-\section{Requisiti Non Funzionali e Vincoli d'Esame}
-% [DA COMPLETARE]
+\section{Requisiti Minimi del Corso}
+
+I requisiti minimi obbligatori del corso Sistemi Mobili sono soddisfatti dall'applicazione
+nei seguenti punti:
+
 \begin{itemize}
-    \item Sviluppo nativo in Kotlin, senza codice Java legacy.
-    \item Struttura del codice suddivisa in moduli secondo il principio di Separation of Concerns (moduli \texttt{:domain}, \texttt{:data}, \texttt{:ui}, \texttt{:app}).
-    \item Utilizzo corretto dei componenti Lifecycle: \texttt{ViewModel} e \texttt{StateFlow}/\texttt{LiveData}.
-    \item Gestione dell'asincronia tramite Kotlin Coroutines, con separazione netta tra Main Thread e Background Thread.
-    \item Salvataggio dei dati in storage locale (Room per dati strutturati, DataStore per preferenze).
-    \item Consegna di una relazione finale scritta.
+    \item \textbf{Kotlin puro}: l'intero progetto è scritto in Kotlin; non è presente alcun file Java.
+    \item \textbf{Separazione in moduli}: il codice è organizzato nei moduli \texttt{:domain},
+          \texttt{:data}, \texttt{:ui} e \texttt{:app}, ciascuno con responsabilità distinte.
+    \item \textbf{ViewModel e StateFlow/LiveData}: ogni schermata utilizza un ViewModel dedicato
+          come unico state holder; la UI osserva uno \texttt{StateFlow} e non contiene logica di business.
+    \item \textbf{Kotlin Coroutines}: tutte le operazioni di I/O (Room, chiamate di rete) avvengono
+          su \texttt{Dispatchers.IO}; il Main Thread non viene mai bloccato.
+    \item \textbf{Storage locale}: Room per la persistenza strutturata del libretto esami e dei
+          dati di gamification; DataStore per le preferenze utente e i flag di onboarding.
+    \item \textbf{Relazione finale}: questo documento.
 \end{itemize}
 
-% ── CAPITOLO 2 — SPECIFICHE TECNICHE ────────────────────────
-\chapter{Specifiche Tecniche}
+% ── CAPITOLO 2 — SCELTE PROGETTUALI ─────────────────────────
+\chapter{Scelte Progettuali}
 
-\section{Linguaggio e IDE}
-% [DA COMPLETARE]
+\section{Architettura del Sistema}
 
-\section{Gestione Dipendenze}
-% [DA COMPLETARE]
+\subsection{Clean Architecture Multi-Modulo}
+% [DA COMPLETARE — descrivi i tre layer (UI, Domain, Data) e il modulo :app.
+%  Per ogni layer: cosa contiene, cosa NON contiene, perché questa separazione.
+%  Sottolinea che :domain è puro Kotlin, privo di dipendenze Android.]
 
-\section{Core Libraries}
-% [DA COMPLETARE — aggiornare man mano che le librerie vengono integrate]
+\subsection{Schema delle Dipendenze tra Moduli}
+% [DA COMPLETARE — inserisci il diagramma testuale (o figura) che mostra le dipendenze:
+%   :app  →  :ui, :domain, :data
+%   :ui   →  :domain
+%   :data →  :domain
+%   :domain → (nessuna dipendenza interna)
+%  Spiega perché queste frecce e non altre (es. perché :ui non dipende da :data).]
 
-% ── CAPITOLO 3 — ARCHITETTURA ───────────────────────────────
-\chapter{Architettura}
+\subsection{Pattern MVVM e Flusso dei Dati}
+% [DA COMPLETARE — descrivi il flusso Fragment → ViewModel → UseCase → Repository → DAO
+%  e il flusso reattivo inverso (Flow da Room → StateFlow nel ViewModel → UI).
+%  Sottolinea la sopravvivenza del ViewModel ai cambi di configurazione.]
 
-\section{Clean Architecture}
-% [DA COMPLETARE]
+\section{Librerie e Tecnologie Utilizzate}
+% [DA COMPLETARE — per ogni libreria: nome, scopo, motivazione della scelta.
+%  Aggiornare man mano che le dipendenze vengono effettivamente utilizzate.]
 
-\section{Pattern MVVM}
-% [DA COMPLETARE]
+\subsection{Linguaggio e Ambiente di Sviluppo}
+% [DA COMPLETARE — Kotlin, Android Studio, minSdk/targetSdk]
 
-\section{Repository Pattern}
-% [DA COMPLETARE]
+\subsection{Gestione delle Dipendenze}
+% [DA COMPLETARE — Gradle Kotlin DSL, Version Catalog (libs.versions.toml)]
 
-\section{Dependency Injection (RepositoryProvider manuale)}
-% [DA COMPLETARE]
+\subsection{Jetpack e Librerie Core}
+% [DA COMPLETARE — Room, DataStore, ViewModel, Coroutines+Flow, ViewBinding, RecyclerView.
+%  Per ognuna: una riga di scopo + una riga di motivazione rispetto ad alternative.]
 
-% ── CAPITOLO 4 — DESIGN DETTAGLIATO ─────────────────────────
-\chapter{Design Dettagliato}
+\subsection{Librerie Aggiuntive}
+% [DA COMPLETARE — Retrofit/OkHttp, WorkManager, Android Security (EncryptedSharedPreferences),
+%  Glide. Aggiungere solo quelle effettivamente integrate.]
 
-% Formato obbligatorio per ogni problema: \subsubsection + \paragraph{Problema} + \paragraph{Soluzione}
-% NON inserire UML — solo testo e snippet Kotlin
+% ── CAPITOLO 3 — DETTAGLI IMPLEMENTATIVI ─────────────────────
+\chapter{Dettagli Implementativi}
 
-% [DA COMPLETARE — ogni problema viene aggiunto al termine dell'implementazione corrispondente]
+% Formato obbligatorio per ogni problema/soluzione:
+%   \section{Titolo sintetico}
+%   \paragraph{Problema} descrizione della sfida tecnica
+%   \paragraph{Soluzione} come è stata risolta, con eventuale snippet Kotlin (~10-15 righe max)
+%
+% Aggiungere una \section per ogni scelta non ovvia al termine dell'implementazione corrispondente.
 
-% ── CAPITOLO 5 — SOLUZIONI DI SVILUPPO ──────────────────────
-\chapter{Soluzioni di Sviluppo}
+% [DA COMPLETARE — esempi di sezioni da aggiungere man mano:]
+% - Gestione reattiva della lista esami (RecyclerView + ListAdapter + DiffUtil + StateFlow)
+% - Sicurezza delle credenziali (EncryptedSharedPreferences per il token JWT)
+% - Persistenza ibrida (Room per entità strutturate, DataStore per preferenze)
+% - Sincronizzazione offline-first con WorkManager
+% - Gamification: aggiornamento reattivo di XP e livello
 
-\section{Concorrenza e Coroutines}
-% [DA COMPLETARE]
+% ── CAPITOLO 4 — PUNTI FORTI E PUNTI DEBOLI ─────────────────
+\chapter{Punti Forti e Punti Deboli}
 
-\section{ViewBinding}
-% [DA COMPLETARE]
+\section{Punti Forti}
+% [DA COMPLETARE — aspetti ben riusciti del progetto: architettura pulita, separazione
+%  dei layer, reattività dell'UI, copertura dei requisiti d'esame, ecc.
+%  Essere specifici: non "buona architettura" ma "il modulo :domain non ha dipendenze
+%  Android, rendendolo testabile in isolamento senza emulatore".]
 
-\section{Material Design 3}
-% [DA COMPLETARE]
+\section{Punti Deboli}
+% [DA COMPLETARE — limitazioni attuali, compromessi accettati, aspetti migliorabili.
+%  Essere onesti e tecnici: es. assenza di test unitari completi, UI non ottimizzata
+%  per tablet, gestione degli errori di rete non sempre granulare, ecc.]
 
-\section{RecyclerView e DiffUtil}
-% [DA COMPLETARE]
+% ── CAPITOLO 5 — MIGLIORIE E SVILUPPI FUTURI ────────────────
+\chapter{Migliorie e Sviluppi Futuri}
 
-% ── CAPITOLO 6 — SVILUPPI FUTURI ────────────────────────────
-\chapter{Sviluppi Futuri}
+\section{Migliorie a Breve Termine}
+% [DA COMPLETARE — aspetti già identificati come migliorabili nell'attuale implementazione:
+%  es. copertura test, accessibilità, ottimizzazione query Room, ecc.]
 
-\section{Notifiche Push (Firebase Cloud Messaging)}
-% [DA COMPLETARE]
-
-\section{Widget e WearOS}
-% [DA COMPLETARE]
-
-\section{Desktop Windowing e Responsiveness}
-% [DA COMPLETARE]
-
-% ── APPENDICE — GUIDA UTENTE ────────────────────────────────
-\appendix
-
-\chapter{Guida Utente}
-
-\section{Installazione e Avvio}
-% [DA COMPLETARE]
-
-\section{Primo Accesso e Autenticazione}
-% [DA COMPLETARE]
-
-\section{Navigazione della Dashboard Principale}
-% [DA COMPLETARE]
-
-\section{Inserimento di un Nuovo Esame}
-% [DA COMPLETARE]
-
-\section{Gestione Profilo e Disconnessione}
-% [DA COMPLETARE]
+\section{Sviluppi Futuri}
+% [DA COMPLETARE — funzionalità non implementate per scelta o per mancanza di tempo:
+%  es. Jetpack Compose per le nuove schermate, notifiche push FCM, widget home screen,
+%  supporto WearOS, Desktop Windowing/ChromeOS, importazione piano di studi da Esse3.]
 
 \end{document}
