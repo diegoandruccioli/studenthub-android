@@ -1,3 +1,7 @@
 package com.unibo.android.domain.di
 
-interface RepositoryProvider
+import com.unibo.android.domain.repository.EsameRepository
+
+interface RepositoryProvider {
+    fun getEsameRepository(): EsameRepository
+}
