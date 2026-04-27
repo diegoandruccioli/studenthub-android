@@ -9,4 +9,9 @@
     <string name="hotel">Hotel</string>
     <string name="apartment">Appartamento</string>
 
+    <!-- Libretto Esami -->
+    <string name="aggiungi_esame">Aggiungi esame</string>
+    <string name="elimina_esame">Elimina esame</string>
+    <string name="libretto_vuoto">Nessun esame ancora.\nPremi + per aggiungerne uno.</string>
+
 </resources>
