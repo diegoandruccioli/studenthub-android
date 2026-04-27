@@ -77,9 +77,11 @@
 %  di gamification (XP, livelli, badge). NON scendere in dettagli tecnici.]
 
 \section{Requisiti Funzionali}
-% [DA COMPLETARE — aggiornare man mano che le feature vengono implementate]
 \begin{itemize}
-    \item % feature 1
+    \item Visualizzare il libretto con la lista di tutti gli esami registrati, ordinati per data.
+    \item Aggiungere un esame specificando nome, voto (18--30 con possibilità di lode), CFU e data.
+    \item Eliminare un esame dal libretto.
+    % [DA COMPLETARE — aggiungere man mano che le feature vengono implementate]
 \end{itemize}
 
 \section{Requisiti Minimi del Corso}
@@ -151,8 +153,42 @@ nei seguenti punti:
 %
 % Aggiungere una \section per ogni scelta non ovvia al termine dell'implementazione corrispondente.
 
-% [DA COMPLETARE — esempi di sezioni da aggiungere man mano:]
-% - Gestione reattiva della lista esami (RecyclerView + ListAdapter + DiffUtil + StateFlow)
+\section{Gestione reattiva della lista esami}
+
+\paragraph{Problema}
+La lista degli esami deve aggiornarsi automaticamente ogni volta che un esame viene
+aggiunto o eliminato, senza che la UI debba interrogare manualmente il database.
+Un'implementazione basata su query one-shot richiederebbe un refresh esplicito
+ad ogni operazione, con rischio di inconsistenze. È inoltre necessario evitare
+memory leak quando il Fragment viene distrutto in seguito a un cambio di configurazione.
+
+\paragraph{Soluzione}
+Il pattern adottato sfrutta la reattività nativa di Room tramite \texttt{Flow}.
+Il DAO espone \texttt{fun getAllEsami(): Flow<List<EsameEntity>>}: Room emette
+automaticamente una nuova lista ad ogni modifica della tabella \texttt{esami}.
+Il \texttt{RepositoryImpl} applica il mapper \texttt{toDomain()} e garantisce
+l'esecuzione su \texttt{Dispatchers.IO} tramite \texttt{flowOn}.
+Il \texttt{LibrettoViewModel} raccoglie il Flow e lo espone come \texttt{StateFlow}
+immutabile alla UI:
+
+\begin{lstlisting}
+private val _esami = MutableStateFlow<List<Esame>>(emptyList())
+val esami: StateFlow<List<Esame>> = _esami.asStateFlow()
+
+init {
+    viewModelScope.launch {
+        getEsamiUseCase().collect { lista -> _esami.value = lista }
+    }
+}
+\end{lstlisting}
+
+Il Fragment osserva il \texttt{StateFlow} tramite \texttt{repeatOnLifecycle(Lifecycle.State.STARTED)},
+che sospende la raccolta quando il Fragment non è visibile, prevenendo memory leak.
+Gli aggiornamenti alla \texttt{RecyclerView} avvengono tramite \texttt{ListAdapter} con
+\texttt{DiffUtil.ItemCallback}, che calcola le differenze in background e produce
+animazioni automatiche senza ri-renderizzare l'intera lista.
+
+% [DA COMPLETARE — sezioni da aggiungere man mano:]
 % - Sicurezza delle credenziali (EncryptedSharedPreferences per il token JWT)
 % - Persistenza ibrida (Room per entità strutturate, DataStore per preferenze)
 % - Sincronizzazione offline-first con WorkManager
