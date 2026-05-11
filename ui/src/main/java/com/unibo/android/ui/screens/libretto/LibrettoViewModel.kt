@@ -1,4 +1,4 @@
-package com.unibo.android.ui.libretto
+package com.unibo.android.ui.screens.libretto
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel

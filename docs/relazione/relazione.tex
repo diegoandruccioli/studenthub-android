@@ -93,10 +93,14 @@ nei seguenti punti:
     \item \textbf{Kotlin puro}: l'intero progetto è scritto in Kotlin; non è presente alcun file Java.
     \item \textbf{Separazione in moduli}: il codice è organizzato nei moduli \texttt{:domain},
           \texttt{:data}, \texttt{:ui} e \texttt{:app}, ciascuno con responsabilità distinte.
-    \item \textbf{ViewModel e StateFlow/LiveData}: ogni schermata utilizza un ViewModel dedicato
-          come unico state holder; la UI osserva uno \texttt{StateFlow} e non contiene logica di business.
+    \item \textbf{ViewModel e StateFlow}: ogni schermata utilizza un ViewModel dedicato
+          come unico state holder; la UI osserva uno \texttt{StateFlow} tramite
+          \texttt{collectAsStateWithLifecycle()} e non contiene logica di business.
     \item \textbf{Kotlin Coroutines}: tutte le operazioni di I/O (Room, chiamate di rete) avvengono
           su \texttt{Dispatchers.IO}; il Main Thread non viene mai bloccato.
+    \item \textbf{Jetpack Compose}: l'interfaccia utente è implementata interamente in Jetpack
+          Compose. Le liste di dati usano \texttt{LazyColumn} con chiave stabile per item,
+          equivalente Compose di RecyclerView con DiffUtil.
     \item \textbf{Storage locale}: Room per la persistenza strutturata del libretto esami e dei
           dati di gamification; DataStore per le preferenze utente e i flag di onboarding.
     \item \textbf{Relazione finale}: questo documento.
@@ -182,11 +186,64 @@ init {
 }
 \end{lstlisting}
 
-Il Fragment osserva il \texttt{StateFlow} tramite \texttt{repeatOnLifecycle(Lifecycle.State.STARTED)},
-che sospende la raccolta quando il Fragment non è visibile, prevenendo memory leak.
-Gli aggiornamenti alla \texttt{RecyclerView} avvengono tramite \texttt{ListAdapter} con
-\texttt{DiffUtil.ItemCallback}, che calcola le differenze in background e produce
-animazioni automatiche senza ri-renderizzare l'intera lista.
+Con l'adozione di Jetpack Compose, la UI osserva il \texttt{StateFlow} tramite
+\texttt{collectAsStateWithLifecycle()}, che integra automaticamente la consapevolezza
+del ciclo di vita: la raccolta si sospende quando la schermata non è visibile e riprende
+al rientro in foreground, prevenendo aggiornamenti inutili e memory leak.
+La lista degli esami è implementata con \texttt{LazyColumn} e la funzione di estensione
+\texttt{items(list, key = \{ it.id \})}: Compose usa la chiave stabile per applicare
+la riconciliazione dell'albero delle composizioni, ottenendo lo stesso effetto di
+\texttt{DiffUtil.ItemCallback} senza richiedere un Adapter esplicito.
+
+\section{Architettura UI con Jetpack Compose e navigazione adattiva}
+
+\paragraph{Problema}
+A partire dall'introduzione di Jetpack Compose nel corso, il layer UI deve adottare
+il paradigma dichiarativo. Occorre una struttura di navigazione che si adatti
+automaticamente a smartphone, tablet e finestre ridimensionabili su desktop,
+senza richiedere layout alternativi per ogni configurazione.
+
+\paragraph{Soluzione}
+Il modulo \texttt{:ui} è stato interamente convertito a Jetpack Compose.
+\texttt{MainActivity} estende \texttt{ComponentActivity} e delega tutta la UI
+a \texttt{setContent \{\}}, con \texttt{enableEdgeToEdge()} per il disegno
+sotto le barre di sistema.
+
+Per la navigazione adattiva si utilizza \texttt{NavigationSuiteScaffold} della
+libreria \texttt{material3-adaptive-navigation-suite}: questo composable seleziona
+automaticamente la modalità di navigazione più appropriata in base alle dimensioni
+della finestra — Bottom Navigation Bar su smartphone in verticale, Navigation Rail
+su tablet e in orizzontale, Navigation Drawer su schermi grandi (Figura~\ref{fig:nav-adaptive}).
+Il pattern segue esattamente quello insegnato nel corso e soddisfa il requisito
+di responsiveness senza alcun codice condizionale esplicito.
+
+\begin{lstlisting}
+NavigationSuiteScaffold(
+    navigationSuiteItems = {
+        AppDestinations.entries.forEach { destination ->
+            item(
+                icon = { Icon(destination.icon, ...) },
+                label = { Text(destination.label) },
+                selected = destination == currentDestination,
+                onClick = { currentDestination = destination }
+            )
+        }
+    }
+) {
+    when (currentDestination) {
+        AppDestinations.LIBRETTO -> LibrettoScreen(viewModel = librettoViewModel)
+        ...
+    }
+}
+\end{lstlisting}
+
+Il \texttt{LibrettoViewModel} (che estende \texttt{AndroidViewModel}) viene creato
+con \texttt{viewModel()} di \texttt{lifecycle-viewmodel-compose}: Android assegna
+automaticamente l'istanza di \texttt{Application} al costruttore, mantenendo
+compatibilità con il pattern \texttt{RepositoryProvider} già definito nel modulo
+\texttt{:app}. Il ViewModel sopravvive ai cambi di configurazione (rotazione dello
+schermo, ridimensionamento finestra su desktop) esattamente come nelle versioni
+Views/XML.
 
 % [DA COMPLETARE — sezioni da aggiungere man mano:]
 % - Sicurezza delle credenziali (EncryptedSharedPreferences per il token JWT)

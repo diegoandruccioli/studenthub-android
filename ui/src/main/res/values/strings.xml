@@ -1,17 +1,18 @@
 <resources>
-    <string name="app_name">CorsoLp25-26</string>
-    <string name="app_subtitle">App subtitle</string>
-    <string name="hello_world">Hello World!</string>
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
-    <string name="title">Title example</string>
-
-    <string name="hotel">Hotel</string>
-    <string name="apartment">Appartamento</string>
+    <string name="app_name">StudentHub</string>
 
     <!-- Libretto Esami -->
     <string name="aggiungi_esame">Aggiungi esame</string>
     <string name="elimina_esame">Elimina esame</string>
     <string name="libretto_vuoto">Nessun esame ancora.\nPremi + per aggiungerne uno.</string>
 
+    <!-- Dialog aggiungi esame -->
+    <string name="dialog_title_aggiungi">Aggiungi esame</string>
+    <string name="hint_nome">Nome materia</string>
+    <string name="hint_voto">Voto (18–30)</string>
+    <string name="hint_cfu">CFU</string>
+    <string name="hint_data">Data (gg/mm/aaaa)</string>
+    <string name="label_lode">Con lode</string>
+    <string name="dialog_conferma">Aggiungi</string>
+    <string name="dialog_annulla">Annulla</string>
 </resources>
