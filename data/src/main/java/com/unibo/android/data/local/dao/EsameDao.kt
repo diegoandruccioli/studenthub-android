@@ -14,6 +14,9 @@ interface EsameDao {
     @Query("SELECT * FROM esami ORDER BY data_esame DESC")
     fun getAllEsami(): Flow<List<EsameEntity>>
 
+    @Query("SELECT * FROM esami")
+    suspend fun getAllEsamiSync(): List<EsameEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEsame(esame: EsameEntity)
 

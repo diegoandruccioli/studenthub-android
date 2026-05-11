@@ -15,4 +15,10 @@
     <string name="label_lode">Con lode</string>
     <string name="dialog_conferma">Aggiungi</string>
     <string name="dialog_annulla">Annulla</string>
+
+    <!-- Obiettivi -->
+    <string name="titolo_obiettivi">Obiettivi</string>
+    <string name="descrizione_obiettivi">Completa le sfide e guadagna XP</string>
+    <string name="label_premio">%1$d xp</string>
+    <string name="sezione_obiettivi">Elenco Obiettivi</string>
 </resources>

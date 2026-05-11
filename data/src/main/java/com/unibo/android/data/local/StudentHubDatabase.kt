@@ -4,13 +4,20 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.unibo.android.data.local.dao.EsameDao
+import com.unibo.android.data.local.dao.ObiettivoDao
 import com.unibo.android.data.local.entity.EsameEntity
+import com.unibo.android.data.local.entity.ObiettivoEntity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
-@Database(entities = [EsameEntity::class], version = 1)
+@Database(entities = [EsameEntity::class, ObiettivoEntity::class], version = 2)
 abstract class StudentHubDatabase : RoomDatabase() {
 
     abstract fun esameDao(): EsameDao
+    abstract fun obiettiviDao(): ObiettivoDao
 
     companion object {
         @Volatile private var INSTANCE: StudentHubDatabase? = null
@@ -21,7 +28,33 @@ abstract class StudentHubDatabase : RoomDatabase() {
                     context.applicationContext,
                     StudentHubDatabase::class.java,
                     "studenthub_db"
-                ).build().also { INSTANCE = it }
+                )
+                .fallbackToDestructiveMigration(true)
+                .addCallback(object : Callback() {
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        super.onCreate(db)
+                        prepopulate(context)
+                    }
+
+                    override fun onDestructiveMigration(db: SupportSQLiteDatabase) {
+                        super.onDestructiveMigration(db)
+                        prepopulate(context)
+                    }
+
+                    private fun prepopulate(context: Context) {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            getInstance(context).obiettiviDao().insertObiettivi(
+                                listOf(
+                                    ObiettivoEntity(1, "Primo Passo", "Registra il tuo primo esame superato", false, 150),
+                                    ObiettivoEntity(2, "Secchione", "Ottieni la tua prima Lode", false, 300),
+                                    ObiettivoEntity(3, "Maratoneta", "Supera 3 esami in un mese", false, 500),
+                                    ObiettivoEntity(4, "Giro di Boa", "Raggiungi 90 CFU", false, 800)
+                                )
+                            )
+                        }
+                    }
+                })
+                .build().also { INSTANCE = it }
             }
         }
     }

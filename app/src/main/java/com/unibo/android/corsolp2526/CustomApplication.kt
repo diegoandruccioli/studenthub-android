@@ -5,6 +5,7 @@ import com.unibo.android.data.di.RepositoryProviderImpl
 import com.unibo.android.domain.di.RepositoryProvider
 import com.unibo.android.domain.di.UseCasesProvider
 import com.unibo.android.domain.repository.EsameRepository
+import com.unibo.android.domain.repository.ObiettivoRepository
 
 class CustomApplication : Application(), RepositoryProvider {
 
@@ -18,4 +19,7 @@ class CustomApplication : Application(), RepositoryProvider {
 
     override fun getEsameRepository(): EsameRepository =
         repositoryProviderImpl.getEsameRepository()
+
+    override fun getObiettivoRepository(): ObiettivoRepository =
+        repositoryProviderImpl.getObiettivoRepository()
 }

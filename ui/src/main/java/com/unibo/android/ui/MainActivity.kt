@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.School
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +27,8 @@ import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.unibo.android.ui.screens.libretto.LibrettoScreen
 import com.unibo.android.ui.screens.libretto.LibrettoViewModel
+import com.unibo.android.ui.screens.obiettivi.ObiettiviScreen
+import com.unibo.android.ui.screens.obiettivi.ObiettiviViewModel
 import com.unibo.android.ui.theme.StudentHubTheme
 
 class MainActivity : ComponentActivity() {
@@ -45,6 +47,7 @@ class MainActivity : ComponentActivity() {
 fun StudentHubApp() {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.LIBRETTO) }
     val librettoViewModel: LibrettoViewModel = viewModel()
+    val obiettiviViewModel: ObiettiviViewModel = viewModel()
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
@@ -61,7 +64,7 @@ fun StudentHubApp() {
         when (currentDestination) {
             AppDestinations.LIBRETTO -> LibrettoScreen(viewModel = librettoViewModel)
             AppDestinations.STATISTICHE -> PlaceholderScreen(label = "Statistiche")
-            AppDestinations.PROFILO -> PlaceholderScreen(label = "Profilo")
+            AppDestinations.OBIETTIVI -> ObiettiviScreen(viewModel = obiettiviViewModel)
         }
     }
 }
@@ -69,7 +72,7 @@ fun StudentHubApp() {
 enum class AppDestinations(val label: String, val icon: ImageVector) {
     LIBRETTO("Libretto", Icons.Outlined.School),
     STATISTICHE("Statistiche", Icons.Outlined.BarChart),
-    PROFILO("Profilo", Icons.Outlined.Person),
+    OBIETTIVI("Obiettivi", Icons.Outlined.EmojiEvents),
 }
 
 @PreviewScreenSizes

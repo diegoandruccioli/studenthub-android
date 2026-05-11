@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.unibo.android.domain.di.RepositoryProvider
 import com.unibo.android.domain.model.Esame
 import com.unibo.android.domain.usecase.AddEsameUseCase
+import com.unibo.android.domain.usecase.CheckObiettiviUseCase
 import com.unibo.android.domain.usecase.DeleteEsameUseCase
 import com.unibo.android.domain.usecase.GetEsamiUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,9 +17,11 @@ import kotlinx.coroutines.launch
 class LibrettoViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = (application as RepositoryProvider).getEsameRepository()
+    private val obiettivoRepository = (application as RepositoryProvider).getObiettivoRepository()
     private val getEsamiUseCase = GetEsamiUseCase(repository)
     private val addEsameUseCase = AddEsameUseCase(repository)
     private val deleteEsameUseCase = DeleteEsameUseCase(repository)
+    private val checkObiettiviUseCase = CheckObiettiviUseCase(obiettivoRepository)
 
     private val _esami = MutableStateFlow<List<Esame>>(emptyList())
     val esami: StateFlow<List<Esame>> = _esami.asStateFlow()
@@ -32,10 +35,16 @@ class LibrettoViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun addEsame(esame: Esame) {
-        viewModelScope.launch { addEsameUseCase(esame) }
+        viewModelScope.launch {
+            addEsameUseCase(esame)
+            checkObiettiviUseCase()
+        }
     }
 
     fun deleteEsame(esame: Esame) {
-        viewModelScope.launch { deleteEsameUseCase(esame) }
+        viewModelScope.launch {
+            deleteEsameUseCase(esame)
+            checkObiettiviUseCase()
+        }
     }
 }
