@@ -1,6 +1,6 @@
 package com.unibo.android.ui.screens.obiettivi
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,7 +19,6 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -39,44 +38,49 @@ import com.unibo.android.ui.R
 @Composable
 fun ObiettiviScreen(
     viewModel: ObiettiviViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val obiettivi by viewModel.obiettivi.collectAsStateWithLifecycle()
+    val blueColor = Color(0xFF1A5A96)
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            text = "Home > Obiettivi",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = stringResource(R.string.titolo_obiettivi),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 8.dp)
-        )
-        Text(
-            text = stringResource(R.string.descrizione_obiettivi),
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
+        Column {
+            Text(
+                text = "Home > Obiettivi",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = stringResource(R.string.titolo_obiettivi),
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = blueColor
+                )
+            )
+            Text(
+                text = stringResource(R.string.descrizione_obiettivi),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .background(blueColor)
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -85,16 +89,18 @@ fun ObiettiviScreen(
                         Text(
                             text = "Obiettivo",
                             style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
                         Text(
                             text = "Premio",
                             style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
                     }
                 }
-                HorizontalDivider()
+                
                 LazyColumn(
                     modifier = Modifier.padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -110,11 +116,14 @@ fun ObiettiviScreen(
 
 @Composable
 private fun ObiettivoItem(obiettivo: Obiettivo) {
+    val completedColor = Color(0xFF4CAF50)
+    val incompleteColor = MaterialTheme.colorScheme.outline
+    
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        color = if (obiettivo.completato) Color(0xFFF0FFF0) else MaterialTheme.colorScheme.surface
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEEEEE)),
+        color = Color.White
     ) {
         Row(
             modifier = Modifier
@@ -125,8 +134,8 @@ private fun ObiettivoItem(obiettivo: Obiettivo) {
             Icon(
                 imageVector = if (obiettivo.completato) Icons.Default.CheckCircle else Icons.Outlined.Circle,
                 contentDescription = null,
-                tint = if (obiettivo.completato) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outline,
-                modifier = Modifier.size(24.dp)
+                tint = if (obiettivo.completato) completedColor else incompleteColor,
+                modifier = Modifier.size(28.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -134,24 +143,24 @@ private fun ObiettivoItem(obiettivo: Obiettivo) {
                     text = obiettivo.nome,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
-                    color = if (obiettivo.completato) Color.Black else MaterialTheme.colorScheme.onSurface
+                    color = if (obiettivo.completato) Color.Black else Color.Gray
                 )
                 Text(
                     text = obiettivo.descrizione,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color.Gray
                 )
             }
             Surface(
-                color = if (obiettivo.completato) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surfaceVariant,
+                color = if (obiettivo.completato) Color(0xFFE8F5E9) else Color(0xFFF5F5F5),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Text(
                     text = "+${obiettivo.premioXp} xp",
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = if (obiettivo.completato) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (obiettivo.completato) Color(0xFF2E7D32) else Color.Gray
                 )
             }
         }

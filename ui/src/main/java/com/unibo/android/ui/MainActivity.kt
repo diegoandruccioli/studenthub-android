@@ -27,6 +27,8 @@ import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.unibo.android.ui.screens.libretto.LibrettoScreen
 import com.unibo.android.ui.screens.libretto.LibrettoViewModel
+import com.unibo.android.ui.screens.statistiche.StatisticheScreen
+import com.unibo.android.ui.screens.statistiche.StatisticheViewModel
 import com.unibo.android.ui.screens.obiettivi.ObiettiviScreen
 import com.unibo.android.ui.screens.obiettivi.ObiettiviViewModel
 import com.unibo.android.ui.theme.StudentHubTheme
@@ -47,6 +49,7 @@ class MainActivity : ComponentActivity() {
 fun StudentHubApp() {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.LIBRETTO) }
     val librettoViewModel: LibrettoViewModel = viewModel()
+    val statisticheViewModel: StatisticheViewModel = viewModel()
     val obiettiviViewModel: ObiettiviViewModel = viewModel()
 
     NavigationSuiteScaffold(
@@ -63,7 +66,7 @@ fun StudentHubApp() {
     ) {
         when (currentDestination) {
             AppDestinations.LIBRETTO -> LibrettoScreen(viewModel = librettoViewModel)
-            AppDestinations.STATISTICHE -> PlaceholderScreen(label = "Statistiche")
+            AppDestinations.STATISTICHE -> StatisticheScreen(viewModel = statisticheViewModel)
             AppDestinations.OBIETTIVI -> ObiettiviScreen(viewModel = obiettiviViewModel)
         }
     }

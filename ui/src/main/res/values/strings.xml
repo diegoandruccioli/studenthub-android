@@ -16,6 +16,18 @@
     <string name="dialog_conferma">Aggiungi</string>
     <string name="dialog_annulla">Annulla</string>
 
+    <!-- Statistiche -->
+    <string name="statistiche_title">Statistiche</string>
+    <string name="statistiche_breadcrumb">Home > Statistiche</string>
+    <string name="statistiche_subtitle">Diamo un\'occhiata ai tuoi risultati!</string>
+    <string name="statistiche_media_ponderata">Media Ponderata</string>
+    <string name="statistiche_cfu_sostenuti">CFU Sostenuti</string>
+    <string name="statistiche_base_laurea">Base di Laurea</string>
+    <string name="statistiche_andamento_carriera">Andamento Carriera</string>
+    <string name="statistiche_voti">Voti</string>
+    <string name="statistiche_media">Media</string>
+    <string name="statistiche_vuoto">Aggiungi degli esami per vedere le statistiche</string>
+
     <!-- Obiettivi -->
     <string name="titolo_obiettivi">Obiettivi</string>
     <string name="descrizione_obiettivi">Completa le sfide e guadagna XP</string>
