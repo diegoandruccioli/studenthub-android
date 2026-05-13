@@ -78,9 +78,13 @@
 
 \section{Requisiti Funzionali}
 \begin{itemize}
+    \item Registrarsi con nome, cognome, e-mail e password per creare un nuovo account.
+    \item Accedere con e-mail e password; la sessione viene ricordata tra un'apertura e l'altra dell'app.
     \item Visualizzare il libretto con la lista di tutti gli esami registrati, ordinati per data.
     \item Aggiungere un esame specificando nome, voto (18--30 con possibilità di lode), CFU e data.
     \item Eliminare un esame dal libretto.
+    \item Visualizzare le statistiche della propria carriera (media ponderata, CFU totali, base di laurea, grafico andamento voti).
+    \item Monitorare il completamento degli obiettivi di gamification e i punti XP guadagnati.
     % [DA COMPLETARE — aggiungere man mano che le feature vengono implementate]
 \end{itemize}
 
@@ -244,6 +248,55 @@ compatibilità con il pattern \texttt{RepositoryProvider} già definito nel modu
 \texttt{:app}. Il ViewModel sopravvive ai cambi di configurazione (rotazione dello
 schermo, ridimensionamento finestra su desktop) esattamente come nelle versioni
 Views/XML.
+
+\section{Autenticazione e gestione della sessione utente}
+
+\paragraph{Problema}
+L'applicazione comunica con un backend REST (Node.js/Express) che autentica tramite
+JWT in cookie HTTP-only. L'app deve: (1) presentare le schermate di login e registrazione
+finché l'utente non è autenticato; (2) persistere la sessione tra riavvii dell'app
+senza esporre il token in chiaro; (3) non bloccare il Main Thread durante le chiamate
+di rete; (4) tornare automaticamente al login in caso di sessione scaduta o assente.
+
+\paragraph{Soluzione}
+Il network layer è costruito su \textbf{Retrofit\,2 + OkHttp\,4}. OkHttp è configurato
+con un \texttt{CookieJar} personalizzato in memoria, che persiste e reinvia automaticamente
+il cookie \texttt{token} a ogni richiesta, senza che il codice applicativo debba
+gestirlo esplicitamente. Il backend usa cookie HTTP-only: il cookie non è mai
+accessibile in chiaro dal codice Kotlin, soddisfacendo il requisito di sicurezza.
+
+La persistenza della sessione tra riavvii dell'app è affidata a \textbf{DataStore
+(Preferences)}: all'avvio il \texttt{AuthViewModel} legge il flag \texttt{is\_logged\_in}
+e lo espone come \texttt{StateFlow<Boolean?>} (\texttt{null} = caricamento in corso,
+\texttt{false} = non autenticato, \texttt{true} = autenticato):
+
+\begin{lstlisting}
+val sessionState: StateFlow<Boolean?> = repository.isLoggedIn()
+    .map { it as Boolean? }
+    .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+\end{lstlisting}
+
+Il composable radice \texttt{RootNavigation} osserva \texttt{sessionState} e decide
+quale schermata mostrare senza alcuna navigazione imperativa:
+
+\begin{lstlisting}
+when (sessionState) {
+    null  -> CircularProgressIndicator() // DataStore non ha ancora emesso
+    false -> if (showRegister) RegisterScreen(...) else LoginScreen(...)
+    true  -> StudentHubApp()             // NavigationSuiteScaffold con le tab
+}
+\end{lstlisting}
+
+Quando il backend restituisce una risposta di successo, \texttt{AuthRepositoryImpl}
+chiama \texttt{sessionDataStore.setLoggedIn(true)}: il DataStore emette il nuovo valore,
+il \texttt{StateFlow} si aggiorna e la UI transita automaticamente verso l'app principale
+senza alcuna chiamata esplicita alla navigazione. Il flusso inverso (logout o errore 401)
+imposta il flag a \texttt{false}, riportando l'utente alla schermata di accesso.
+
+Il layer UI introduce tre componenti M3 non usati in precedenza:
+\texttt{Button} (filled) per l'azione primaria di login/registrazione,
+\texttt{CircularProgressIndicator} durante la chiamata di rete,
+e \texttt{Snackbar} per i messaggi di errore restituiti dal server in italiano.
 
 % [DA COMPLETARE — sezioni da aggiungere man mano:]
 % - Sicurezza delle credenziali (EncryptedSharedPreferences per il token JWT)

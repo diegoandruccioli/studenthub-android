@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.School
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,15 +23,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.unibo.android.ui.screens.auth.AuthViewModel
+import com.unibo.android.ui.screens.auth.LoginScreen
+import com.unibo.android.ui.screens.auth.RegisterScreen
 import com.unibo.android.ui.screens.libretto.LibrettoScreen
 import com.unibo.android.ui.screens.libretto.LibrettoViewModel
-import com.unibo.android.ui.screens.statistiche.StatisticheScreen
-import com.unibo.android.ui.screens.statistiche.StatisticheViewModel
 import com.unibo.android.ui.screens.obiettivi.ObiettiviScreen
 import com.unibo.android.ui.screens.obiettivi.ObiettiviViewModel
+import com.unibo.android.ui.screens.statistiche.StatisticheScreen
+import com.unibo.android.ui.screens.statistiche.StatisticheViewModel
 import com.unibo.android.ui.theme.StudentHubTheme
 
 class MainActivity : ComponentActivity() {
@@ -39,9 +43,40 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             StudentHubTheme {
-                StudentHubApp()
+                RootNavigation()
             }
         }
+    }
+}
+
+@Composable
+fun RootNavigation() {
+    val authViewModel: AuthViewModel = viewModel()
+    val sessionState by authViewModel.sessionState.collectAsStateWithLifecycle()
+    var showRegister by rememberSaveable { mutableStateOf(false) }
+
+    when (sessionState) {
+        null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        false -> if (showRegister) {
+            RegisterScreen(
+                viewModel = authViewModel,
+                onNavigateToLogin = {
+                    authViewModel.resetState()
+                    showRegister = false
+                }
+            )
+        } else {
+            LoginScreen(
+                viewModel = authViewModel,
+                onNavigateToRegister = {
+                    authViewModel.resetState()
+                    showRegister = true
+                }
+            )
+        }
+        true -> StudentHubApp()
     }
 }
 
@@ -95,20 +130,15 @@ private fun StudentHubNavigationPreview() {
                 }
             }
         ) {
-            PlaceholderScreen(label = currentDestination.label)
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "${currentDestination.label} — prossimamente",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
         }
-    }
-}
-
-@Composable
-private fun PlaceholderScreen(label: String) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "$label — prossimamente",
-            style = MaterialTheme.typography.bodyLarge
-        )
     }
 }
