@@ -33,4 +33,22 @@
     <string name="descrizione_obiettivi">Completa le sfide e guadagna XP</string>
     <string name="label_premio">%1$d xp</string>
     <string name="sezione_obiettivi">Elenco Obiettivi</string>
+
+    <!-- Login -->
+    <string name="login_title">Bentornato</string>
+    <string name="login_subtitle">Accedi al tuo account StudentHub</string>
+    <string name="hint_email">Email</string>
+    <string name="hint_password">Password</string>
+    <string name="btn_accedi">Accedi</string>
+    <string name="link_registrati">Non hai un account? Registrati</string>
+    <string name="mostra_password">Mostra password</string>
+    <string name="nascondi_password">Nascondi password</string>
+
+    <!-- Registrazione -->
+    <string name="register_title">Crea account</string>
+    <string name="register_subtitle">Inizia il tuo percorso con StudentHub</string>
+    <string name="hint_nome_proprio">Nome</string>
+    <string name="hint_cognome">Cognome</string>
+    <string name="btn_registrati">Registrati</string>
+    <string name="link_accedi">Hai già un account? Accedi</string>
 </resources>
