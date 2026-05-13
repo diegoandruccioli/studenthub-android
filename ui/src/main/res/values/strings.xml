@@ -29,6 +29,9 @@
     <string name="statistiche_vuoto">Aggiungi degli esami per vedere le statistiche</string>
 
     <!-- Obiettivi -->
+    <string name="obiettivi_breadcrumb">Home &gt; Obiettivi</string>
+    <string name="obiettivi_col_obiettivo">Obiettivo</string>
+    <string name="obiettivi_col_premio">Premio</string>
     <string name="titolo_obiettivi">Obiettivi</string>
     <string name="descrizione_obiettivi">Completa le sfide e guadagna XP</string>
     <string name="label_premio">%1$d xp</string>
