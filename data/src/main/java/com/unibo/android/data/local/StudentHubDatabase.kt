@@ -13,7 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-@Database(entities = [EsameEntity::class, ObiettivoEntity::class], version = 2)
+@Database(entities = [EsameEntity::class, ObiettivoEntity::class], version = 3)
 abstract class StudentHubDatabase : RoomDatabase() {
 
     abstract fun esameDao(): EsameDao

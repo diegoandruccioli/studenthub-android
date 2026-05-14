@@ -37,4 +37,5 @@ object NetworkClient {
         .build()
 
     val authApiService: AuthApiService = retrofit.create(AuthApiService::class.java)
+    val examApiService: ExamApiService = retrofit.create(ExamApiService::class.java)
 }

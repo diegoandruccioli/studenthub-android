@@ -11,5 +11,7 @@ data class EsameEntity(
     @ColumnInfo(name = "voto") val voto: Int,
     @ColumnInfo(name = "lode") val lode: Boolean,
     @ColumnInfo(name = "cfu") val cfu: Int,
-    @ColumnInfo(name = "data_esame") val dataEsame: String
+    @ColumnInfo(name = "data_esame") val dataEsame: String,
+    @ColumnInfo(name = "remote_id") val remoteId: Int? = null,
+    @ColumnInfo(name = "pending_sync") val pendingSync: Boolean = true
 )

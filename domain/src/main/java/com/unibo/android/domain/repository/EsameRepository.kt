@@ -8,4 +8,5 @@ interface EsameRepository {
     suspend fun addEsame(esame: Esame)
     suspend fun updateEsame(esame: Esame)
     suspend fun deleteEsame(esame: Esame)
+    suspend fun refreshEsami()
 }
