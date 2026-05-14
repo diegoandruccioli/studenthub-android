@@ -1,76 +1,76 @@
 # StudentHub Android
 
-> Android mobile app inspired by the StudentHub project. Track exams, credits and GPA with gamification rewards. Built with Kotlin, Clean Architecture (MVVM), Room, Coroutines and Flow. UniBO Mobile Systems 2025/26.
+> App Android ispirata al progetto StudentHub. Tieni traccia di esami, CFU e media con un sistema di gamification. Sviluppata con Kotlin, Clean Architecture (MVVM), Room, Coroutines e Flow. UniBO Sistemi Mobili 2025/26.
 
 ---
 
-## Overview
+## Panoramica
 
-**StudentHub** is a native Android application for managing your university career. Students can track exams, CFU (credits), GPA, and academic progress, while the app rewards completed activities (passed exams, reached milestones) with a gamification points system.
+**StudentHub** è un'applicazione Android nativa per la gestione della carriera universitaria. Gli studenti possono tracciare esami, CFU, media e progressi accademici; il sistema premia le attività completate (esami superati, obiettivi raggiunti) con un sistema di punti e ricompense.
 
-This project is the Android mobile development of the original StudentHub web project, built as the final project for the **Sistemi Mobili** course at the University of Bologna (2025/2026).
+Questo progetto è la versione mobile Android del progetto web StudentHub originale, sviluppato come progetto finale per il corso di **Sistemi Mobili** dell'Università di Bologna (2025/2026).
 
 ---
 
-## Tech Stack
+## Stack Tecnologico
 
-| Layer | Technology |
+| Layer | Tecnologia |
 |-------|-----------|
-| Language | Kotlin (100%) |
-| Architecture | Clean Architecture — Multi-module |
-| UI Pattern | MVVM (ViewModel + StateFlow/LiveData) |
-| UI Toolkit | Views / XML + ViewBinding → Jetpack Compose (planned) |
+| Linguaggio | Kotlin (100%) |
+| Architettura | Clean Architecture — Multi-modulo |
+| Pattern UI | MVVM (ViewModel + StateFlow/LiveData) |
+| UI Toolkit | Views / XML + ViewBinding → Jetpack Compose (pianificato) |
 | Async | Kotlin Coroutines + Flow |
-| Local DB | Room (structured data) |
-| Preferences | DataStore (Preferences) |
-| Image loading | Glide |
+| DB locale | Room (dati strutturati) |
+| Preferenze | DataStore (Preferences) |
+| Caricamento immagini | Glide |
 | Min SDK | 31 (Android 12) |
 | Target SDK | 36 |
 
 ---
 
-## Architecture
+## Architettura
 
-The project follows **Clean Architecture** with strict module separation:
+Il progetto segue la **Clean Architecture** con separazione rigorosa dei moduli:
 
 ```
-:app        → Entry point, Application class, manual DI (RepositoryProvider)
-:ui         → Activities, Fragments, ViewModels, Adapters, Custom Views
-:domain     → Use Cases, Repository interfaces, Domain Models (pure Kotlin, no Android)
-:data       → Repository implementations, Room DAOs/Entities, DataStore
+:app        → Entry point, Application class, DI manuale (RepositoryProvider)
+:ui         → Activities, Fragments, ViewModels, Adapter, Custom Views
+:domain     → Use Cases, interfacce Repository, Domain Models (Kotlin puro, no Android)
+:data       → Implementazioni Repository, Room DAO/Entity, DataStore
 ```
 
-**Module dependency rules:**
+**Regole di dipendenza tra moduli:**
 ```
 :app  →  :ui, :domain, :data
 :ui   →  :domain
 :data →  :domain
-:domain  →  (no internal dependencies)
+:domain  →  (nessuna dipendenza interna)
 ```
 
-**Data flow:**
+**Flusso dei dati:**
 ```
 View (Fragment/Activity)
   └── ViewModel  [:ui]
         └── UseCase  [:domain]
-              └── Repository interface  [:domain]
+              └── interfaccia Repository  [:domain]
                     └── RepositoryImpl  [:data]
                           └── Room DAO / DataStore
 ```
 
 ---
 
-## Features
+## Funzionalità
 
-- **Exam tracking** — add, edit and view your exams with grade and CFU
-- **Academic dashboard** — GPA, total CFU, progress toward degree
-- **Gamification** — points and rewards for completed academic milestones
-- **Local persistence** — all data stored locally with Room; preferences via DataStore
-- *(Planned)* Authentication and sync with StudentHub backend (Node.js / MySQL)
+- **Gestione esami** — aggiungi, modifica e visualizza i tuoi esami con voto e CFU
+- **Dashboard accademica** — media, CFU totali, avanzamento verso la laurea
+- **Gamification** — punti e ricompense per traguardi accademici completati
+- **Persistenza locale** — tutti i dati salvati localmente con Room; preferenze tramite DataStore
+- *(Pianificato)* Autenticazione e sincronizzazione con il backend StudentHub (Node.js / MySQL)
 
 ---
 
-## Project Structure
+## Struttura del Progetto
 
 ```
 studenthub-android/
@@ -101,57 +101,85 @@ studenthub-android/
 
 ---
 
-## Getting Started
+## Avvio del Progetto
 
-### Prerequisites
+### Prerequisiti
 
-- Android Studio Hedgehog or later
+- Android Studio Hedgehog o versione successiva
 - JDK 11+
-- Android device or emulator with API 31+
+- Dispositivo Android o emulatore con API 31+
 
-### Build & Run
+### Build e installazione
 
 ```bash
-# Clone the repository
+# Clona il repository
 git clone https://github.com/diegoandruccioli/studenthub-android.git
 
-# Open in Android Studio and sync Gradle, or build from CLI:
+# Apri in Android Studio e sincronizza Gradle, oppure compila da CLI:
 ./gradlew clean build
 
-# Install on connected device/emulator
+# Installa su dispositivo/emulatore connesso
 ./gradlew installDebug
 ```
 
-### Run Tests
+### Esecuzione dei test
 
 ```bash
-# Unit tests
+# Test unitari
 ./gradlew test
 
-# Instrumented tests (requires connected device/emulator)
+# Test strumentali (richiede dispositivo/emulatore connesso)
 ./gradlew connectedAndroidTest
 ```
 
 ---
 
-## Course Requirements Compliance
+## Connessione al Backend
 
-This project satisfies all mandatory requirements for the UniBO Sistemi Mobili exam:
+L'app comunica con il [backend StudentHub](https://github.com/diegoandruccioli/StudentHub) (Node.js / MySQL). La configurazione cambia in base a dove gira l'app.
 
-- [x] Multi-module Clean Architecture (domain / data / ui / app)
-- [x] MVVM — ViewModel as state holder, zero business logic in View
-- [x] ViewModel + StateFlow/LiveData — survives configuration changes
-- [x] Use Cases in domain layer — single responsibility
-- [x] Repository Pattern — single data access point
-- [x] Kotlin Coroutines — strict Main/Background thread separation
-- [x] Room — local structured data persistence
-- [x] DataStore — key-value preferences
-- [x] ViewBinding — no `findViewById`
-- [x] RecyclerView with Adapter/ViewHolder
-- [x] Runtime permissions handling
+### Emulatore Android Studio
+
+L'emulatore gira sulla stessa macchina del backend. Gli emulatori Android mappano il `localhost` dell'host sulla costante `10.0.2.2`.
+
+1. Avvia il backend sul tuo computer (porta predefinita `3010`).
+2. Avvia l'emulatore da Android Studio.
+3. L'app è già configurata per raggiungere `http://10.0.2.2:3010/api/` — nessuna modifica necessaria.
+
+### Dispositivo Fisico Android
+
+Il telefono e il computer che esegue il backend devono essere sulla **stessa rete Wi-Fi**.
+
+1. Trova l'indirizzo IP locale del tuo computer (es. `192.168.1.x`).
+2. Avvia il backend sul tuo computer (porta `3010`).
+3. Apri il file `data/src/main/java/com/unibo/android/data/remote/NetworkClient.kt` e modifica la costante `BASE_URL` alla riga 13:
+   ```kotlin
+   private const val BASE_URL = "http://<ip-del-tuo-computer>:3010/api/"
+   ```
+4. Connetti il telefono alla stessa rete Wi-Fi, poi avvia l'app.
+
+> **Nota:** `localhost` e `10.0.2.2` non funzionano su dispositivo fisico — serve l'IP della rete locale.
 
 ---
 
-## License
+## Conformità ai Requisiti del Corso
 
-Academic project — University of Bologna, 2025/2026.
+Questo progetto soddisfa tutti i requisiti obbligatori per l'esame UniBO Sistemi Mobili:
+
+- [x] Clean Architecture multi-modulo (domain / data / ui / app)
+- [x] MVVM — ViewModel come unico state holder, nessuna logica di business nella View
+- [x] ViewModel + StateFlow/LiveData — sopravvive ai cambiamenti di configurazione
+- [x] Use Cases nel layer domain — singola responsabilità
+- [x] Repository Pattern — unico punto di accesso ai dati
+- [x] Kotlin Coroutines — separazione rigorosa Main/Background thread
+- [x] Room — persistenza locale dati strutturati
+- [x] DataStore — preferenze chiave-valore
+- [x] ViewBinding — nessun `findViewById`
+- [x] RecyclerView con Adapter/ViewHolder
+- [x] Gestione Runtime Permissions
+
+---
+
+## Licenza
+
+Progetto accademico — Università di Bologna, 2025/2026.
