@@ -1,7 +1,7 @@
 package com.unibo.android.ui.screens.auth
 
+import android.util.Patterns
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,6 +55,11 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var emailTouched by remember { mutableStateOf(false) }
+
+    val emailError = if (emailTouched && email.isNotEmpty() &&
+        !Patterns.EMAIL_ADDRESS.matcher(email).matches()
+    ) stringResource(R.string.errore_email_formato) else null
 
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Error) {
@@ -90,9 +95,11 @@ fun LoginScreen(
 
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = { email = it; emailTouched = true },
                 label = { Text(stringResource(R.string.hint_email)) },
                 leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null) },
+                isError = emailError != null,
+                supportingText = { if (emailError != null) Text(emailError) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -132,7 +139,7 @@ fun LoginScreen(
                     .fillMaxWidth()
                     .height(48.dp),
                 enabled = uiState !is AuthUiState.Loading &&
-                    email.isNotBlank() && password.isNotBlank()
+                    email.isNotBlank() && emailError == null && password.isNotBlank()
             ) {
                 if (uiState is AuthUiState.Loading) {
                     CircularProgressIndicator(

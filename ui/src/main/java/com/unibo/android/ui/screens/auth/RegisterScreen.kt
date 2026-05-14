@@ -1,5 +1,6 @@
 package com.unibo.android.ui.screens.auth
 
+import android.util.Patterns
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -59,6 +60,15 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var emailTouched by remember { mutableStateOf(false) }
+    var passwordTouched by remember { mutableStateOf(false) }
+
+    val emailError = if (emailTouched && email.isNotEmpty() &&
+        !Patterns.EMAIL_ADDRESS.matcher(email).matches()
+    ) stringResource(R.string.errore_email_formato) else null
+
+    val passwordError = if (passwordTouched && password.isNotEmpty() && password.length < 8)
+        stringResource(R.string.errore_password_corta) else null
 
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Error) {
@@ -117,9 +127,11 @@ fun RegisterScreen(
 
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = { email = it; emailTouched = true },
                 label = { Text(stringResource(R.string.hint_email)) },
                 leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null) },
+                isError = emailError != null,
+                supportingText = { if (emailError != null) Text(emailError) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -129,7 +141,7 @@ fun RegisterScreen(
 
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = { password = it; passwordTouched = true },
                 label = { Text(stringResource(R.string.hint_password)) },
                 leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) },
                 trailingIcon = {
@@ -146,6 +158,8 @@ fun RegisterScreen(
                 },
                 visualTransformation = if (passwordVisible) VisualTransformation.None
                                        else PasswordVisualTransformation(),
+                isError = passwordError != null,
+                supportingText = { if (passwordError != null) Text(passwordError) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -162,7 +176,8 @@ fun RegisterScreen(
                     .height(48.dp),
                 enabled = uiState !is AuthUiState.Loading &&
                     nome.isNotBlank() && cognome.isNotBlank() &&
-                    email.isNotBlank() && password.isNotBlank()
+                    email.isNotBlank() && emailError == null &&
+                    password.isNotBlank() && passwordError == null
             ) {
                 if (uiState is AuthUiState.Loading) {
                     CircularProgressIndicator(
