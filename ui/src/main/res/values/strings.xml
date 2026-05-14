@@ -6,15 +6,32 @@
     <string name="elimina_esame">Elimina esame</string>
     <string name="libretto_vuoto">Nessun esame ancora.\nPremi + per aggiungerne uno.</string>
 
-    <!-- Dialog aggiungi esame -->
+    <!-- Dialog aggiungi/modifica esame -->
     <string name="dialog_title_aggiungi">Aggiungi esame</string>
+    <string name="dialog_title_modifica">Modifica esame</string>
     <string name="hint_nome">Nome materia</string>
     <string name="hint_voto">Voto (18–30)</string>
-    <string name="hint_cfu">CFU</string>
+    <string name="hint_cfu">CFU (1–48)</string>
     <string name="hint_data">Data (gg/mm/aaaa)</string>
     <string name="label_lode">Con lode</string>
     <string name="dialog_conferma">Aggiungi</string>
+    <string name="dialog_salva">Salva</string>
     <string name="dialog_annulla">Annulla</string>
+    <string name="modifica_esame">Modifica esame</string>
+    <string name="errore_cfu_range">CFU deve essere tra 1 e 48</string>
+
+    <!-- Conferma eliminazione -->
+    <string name="dialog_elimina_titolo">Elimina esame</string>
+    <string name="dialog_elimina_testo">Eliminare \"%s\"?</string>
+    <string name="dialog_conferma_elimina">Elimina</string>
+
+    <!-- Filtri libretto -->
+    <string name="libretto_ordina_per">Ordina per:</string>
+    <string name="sort_data">Data</string>
+    <string name="sort_voto">Voto</string>
+    <string name="sort_cfu">CFU</string>
+    <string name="order_desc">↓ Decrescente</string>
+    <string name="order_asc">↑ Crescente</string>
 
     <!-- Statistiche -->
     <string name="statistiche_title">Statistiche</string>
@@ -54,4 +71,8 @@
     <string name="hint_cognome">Cognome</string>
     <string name="btn_registrati">Registrati</string>
     <string name="link_accedi">Hai già un account? Accedi</string>
+
+    <!-- Validazione -->
+    <string name="errore_email_formato">Inserisci un indirizzo email valido</string>
+    <string name="errore_password_corta">La password deve contenere almeno 8 caratteri</string>
 </resources>

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -22,6 +24,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,12 +34,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.unibo.android.domain.model.Esame
 import com.unibo.android.ui.R
-import com.unibo.android.ui.theme.StudentHubTheme
 
 @Composable
 fun LibrettoScreen(
@@ -44,30 +45,82 @@ fun LibrettoScreen(
     modifier: Modifier = Modifier
 ) {
     val esami by viewModel.esami.collectAsStateWithLifecycle()
+    val sortBy by viewModel.sortBy.collectAsStateWithLifecycle()
+    val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
+
     var showAddDialog by remember { mutableStateOf(false) }
+    var esameToEdit by remember { mutableStateOf<Esame?>(null) }
+    var esameToDelete by remember { mutableStateOf<Esame?>(null) }
 
     Box(modifier = modifier.fillMaxSize()) {
-        if (esami.isEmpty()) {
-            Text(
-                text = stringResource(R.string.libretto_vuoto),
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Filtri sort
+            Row(
                 modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(horizontal = 32.dp),
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        } else {
-            LazyColumn(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize()
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                items(esami, key = { it.id }) { esame ->
-                    EsameCard(
-                        esame = esame,
-                        onDeleteClick = { viewModel.deleteEsame(esame) }
+                Text(
+                    text = stringResource(R.string.libretto_ordina_per),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                FilterChip(
+                    selected = sortBy == SortBy.DATA,
+                    onClick = { viewModel.setSortBy(SortBy.DATA) },
+                    label = { Text(stringResource(R.string.sort_data)) }
+                )
+                FilterChip(
+                    selected = sortBy == SortBy.VOTO,
+                    onClick = { viewModel.setSortBy(SortBy.VOTO) },
+                    label = { Text(stringResource(R.string.sort_voto)) }
+                )
+                FilterChip(
+                    selected = sortBy == SortBy.CFU,
+                    onClick = { viewModel.setSortBy(SortBy.CFU) },
+                    label = { Text(stringResource(R.string.sort_cfu)) }
+                )
+                TextButton(onClick = { viewModel.toggleSortOrder() }) {
+                    Text(
+                        text = if (sortOrder == SortOrder.DESC)
+                            stringResource(R.string.order_desc)
+                        else
+                            stringResource(R.string.order_asc),
+                        style = MaterialTheme.typography.labelMedium
                     )
+                }
+            }
+
+            if (esami.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.libretto_vuoto),
+                        modifier = Modifier.padding(horizontal = 32.dp),
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(
+                        start = 16.dp, end = 16.dp, top = 4.dp, bottom = 88.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(esami, key = { it.id }) { esame ->
+                        EsameCard(
+                            esame = esame,
+                            onEditClick = { esameToEdit = esame },
+                            onDeleteClick = { esameToDelete = esame }
+                        )
+                    }
                 }
             }
         }
@@ -85,8 +138,11 @@ fun LibrettoScreen(
         }
     }
 
+    // Dialog aggiunta
     if (showAddDialog) {
-        AddEsameDialog(
+        EsameDialog(
+            title = stringResource(R.string.dialog_title_aggiungi),
+            confirmLabel = stringResource(R.string.dialog_conferma),
             onDismiss = { showAddDialog = false },
             onConfirm = { esame ->
                 viewModel.addEsame(esame)
@@ -94,22 +150,77 @@ fun LibrettoScreen(
             }
         )
     }
+
+    // Dialog modifica
+    esameToEdit?.let { esame ->
+        EsameDialog(
+            title = stringResource(R.string.dialog_title_modifica),
+            confirmLabel = stringResource(R.string.dialog_salva),
+            initialEsame = esame,
+            onDismiss = { esameToEdit = null },
+            onConfirm = { updated ->
+                viewModel.updateEsame(updated)
+                esameToEdit = null
+            }
+        )
+    }
+
+    // Dialog conferma eliminazione
+    esameToDelete?.let { esame ->
+        AlertDialog(
+            onDismissRequest = { esameToDelete = null },
+            title = { Text(stringResource(R.string.dialog_elimina_titolo)) },
+            text = {
+                Text(stringResource(R.string.dialog_elimina_testo, esame.nome))
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteEsame(esame)
+                        esameToDelete = null
+                    }
+                ) {
+                    Text(
+                        text = stringResource(R.string.dialog_conferma_elimina),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { esameToDelete = null }) {
+                    Text(stringResource(R.string.dialog_annulla))
+                }
+            }
+        )
+    }
 }
 
 @Composable
-private fun AddEsameDialog(
+private fun EsameDialog(
+    title: String,
+    confirmLabel: String,
     onDismiss: () -> Unit,
-    onConfirm: (Esame) -> Unit
+    onConfirm: (Esame) -> Unit,
+    initialEsame: Esame? = null
 ) {
-    var nome by remember { mutableStateOf("") }
-    var voto by remember { mutableStateOf("") }
-    var cfu by remember { mutableStateOf("") }
-    var data by remember { mutableStateOf("") }
-    var lode by remember { mutableStateOf(false) }
+    var nome by remember { mutableStateOf(initialEsame?.nome ?: "") }
+    var voto by remember { mutableStateOf(initialEsame?.voto?.toString() ?: "") }
+    var cfu by remember { mutableStateOf(initialEsame?.cfu?.toString() ?: "") }
+    var data by remember { mutableStateOf(initialEsame?.dataEsame ?: "") }
+    var lode by remember { mutableStateOf(initialEsame?.lode ?: false) }
+
+    val votoInt = voto.toIntOrNull() ?: 0
+    val cfuInt = cfu.toIntOrNull() ?: 0
+    val cfuError = cfu.isNotEmpty() && (cfuInt < 1 || cfuInt > 48)
+
+    // Auto-deseleziona lode se voto scende sotto 30
+    LaunchedEffect(voto) {
+        if (votoInt != 30 && lode) lode = false
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.dialog_title_aggiungi)) },
+        title = { Text(title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
@@ -131,6 +242,10 @@ private fun AddEsameDialog(
                     value = cfu,
                     onValueChange = { cfu = it },
                     label = { Text(stringResource(R.string.hint_cfu)) },
+                    isError = cfuError,
+                    supportingText = {
+                        if (cfuError) Text(stringResource(R.string.errore_cfu_range))
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -142,13 +257,17 @@ private fun AddEsameDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(checked = lode, onCheckedChange = { lode = it })
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = lode,
+                        onCheckedChange = { if (votoInt == 30) lode = it },
+                        enabled = votoInt == 30
+                    )
                     Text(
                         text = stringResource(R.string.label_lode),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (votoInt == 30) MaterialTheme.colorScheme.onSurface
+                                else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -156,23 +275,21 @@ private fun AddEsameDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    val votoInt = voto.toIntOrNull() ?: return@TextButton
-                    val cfuInt = cfu.toIntOrNull() ?: return@TextButton
-                    if (nome.isNotBlank() && votoInt in 18..30 && cfuInt > 0) {
-                        onConfirm(
-                            Esame(
-                                nome = nome.trim(),
-                                voto = votoInt,
-                                lode = lode && votoInt == 30,
-                                cfu = cfuInt,
-                                dataEsame = data.trim()
-                            )
+                    if (nome.isBlank()) return@TextButton
+                    if (votoInt !in 18..30) return@TextButton
+                    if (cfuInt !in 1..48) return@TextButton
+                    onConfirm(
+                        Esame(
+                            id = initialEsame?.id ?: 0,
+                            nome = nome.trim(),
+                            voto = votoInt,
+                            lode = lode && votoInt == 30,
+                            cfu = cfuInt,
+                            dataEsame = data.trim()
                         )
-                    }
+                    )
                 }
-            ) {
-                Text(stringResource(R.string.dialog_conferma))
-            }
+            ) { Text(confirmLabel) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
@@ -180,12 +297,4 @@ private fun AddEsameDialog(
             }
         }
     )
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun AddEsameDialogPreview() {
-    StudentHubTheme {
-        AddEsameDialog(onDismiss = {}, onConfirm = {})
-    }
 }

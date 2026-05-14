@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -30,6 +31,7 @@ import com.unibo.android.ui.theme.StudentHubTheme
 @Composable
 fun EsameCard(
     esame: Esame,
+    onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -71,6 +73,14 @@ fun EsameCard(
                 )
             }
 
+            IconButton(onClick = onEditClick) {
+                Icon(
+                    imageVector = Icons.Outlined.Edit,
+                    contentDescription = stringResource(R.string.modifica_esame),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+
             IconButton(onClick = onDeleteClick) {
                 Icon(
                     imageVector = Icons.Default.Delete,
@@ -88,6 +98,7 @@ private fun EsameCardPreview() {
     StudentHubTheme {
         EsameCard(
             esame = Esame(id = 1, nome = "Sistemi Mobili", voto = 30, lode = true, cfu = 6, dataEsame = "15/06/2025"),
+            onEditClick = {},
             onDeleteClick = {}
         )
     }
