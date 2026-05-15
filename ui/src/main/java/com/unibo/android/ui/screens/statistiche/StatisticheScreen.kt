@@ -39,10 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.unibo.android.domain.model.PuntoAndamento
-import com.unibo.android.domain.model.Statistiche
 import com.unibo.android.ui.R
-import java.util.Locale
 
 @Composable
 fun StatisticheScreen(
@@ -59,13 +56,13 @@ fun StatisticheScreen(
         }
         is StatisticheUiState.Empty -> {
             StatisticheContent(
-                stats = null,
+                uiModel = null,
                 modifier = modifier
             )
         }
         is StatisticheUiState.Success -> {
             StatisticheContent(
-                stats = state.stats,
+                uiModel = state.uiModel,
                 modifier = modifier
             )
         }
@@ -79,7 +76,7 @@ fun StatisticheScreen(
 
 @Composable
 private fun StatisticheContent(
-    stats: Statistiche?,
+    uiModel: StatisticheUiModel?,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -110,7 +107,7 @@ private fun StatisticheContent(
             )
         }
 
-        if (stats == null) {
+        if (uiModel == null) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -124,10 +121,10 @@ private fun StatisticheContent(
                 )
             }
         } else {
-            // Cards
+            // Cards (using pre-formatted strings from UI Model)
             StatCard(
                 label = stringResource(R.string.statistiche_media_ponderata),
-                value = String.format(Locale.ITALY, "%.1f", stats.mediaPonderata),
+                value = uiModel.mediaPonderata,
                 icon = Icons.Outlined.School,
                 iconColor = MaterialTheme.colorScheme.primary,
                 iconBgColor = MaterialTheme.colorScheme.primaryContainer
@@ -135,7 +132,7 @@ private fun StatisticheContent(
 
             StatCard(
                 label = stringResource(R.string.statistiche_cfu_sostenuti),
-                value = stats.cfuSostenuti.toString(),
+                value = uiModel.cfuSostenuti,
                 icon = Icons.Outlined.Checklist,
                 iconColor = MaterialTheme.colorScheme.tertiary,
                 iconBgColor = MaterialTheme.colorScheme.tertiaryContainer
@@ -143,7 +140,7 @@ private fun StatisticheContent(
 
             StatCard(
                 label = stringResource(R.string.statistiche_base_laurea),
-                value = String.format(Locale.ITALY, "%.1f", stats.baseLaurea),
+                value = uiModel.baseLaurea,
                 icon = Icons.Outlined.BarChart,
                 iconColor = MaterialTheme.colorScheme.secondary,
                 iconBgColor = MaterialTheme.colorScheme.secondaryContainer
@@ -186,8 +183,10 @@ private fun StatisticheContent(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
+                    // Truly "Dumb" Career Chart
                     CareerChart(
-                        punti = stats.andamentoCarriera,
+                        puntiVotiRelativi = uiModel.puntiVoti,
+                        puntiMediaRelativi = uiModel.puntiMedia,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(200.dp)
@@ -265,7 +264,8 @@ fun ChartLegendItem(color: Color, label: String) {
 
 @Composable
 fun CareerChart(
-    punti: List<PuntoAndamento>,
+    puntiVotiRelativi: List<OffsetRelativo>,
+    puntiMediaRelativi: List<OffsetRelativo>,
     modifier: Modifier = Modifier
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
@@ -281,9 +281,10 @@ fun CareerChart(
         val chartWidth = width - padding * 2
         val chartHeight = height - padding * 2
 
-        // Grid lines (voti 18 to 30)
-        val stepY = chartHeight / 12
-        for (i in 0..12) {
+        // Grid lines - Still UI concern (how many lines), but independent of values
+        val numGridLines = 12
+        val stepY = chartHeight / numGridLines
+        for (i in 0..numGridLines) {
             val y = chartHeight + padding - i * stepY
             drawLine(
                 color = outlineVariantColor,
@@ -293,59 +294,58 @@ fun CareerChart(
             )
         }
 
-        if (punti.isNotEmpty()) {
-            val stepX = if (punti.size > 1) chartWidth / (punti.size - 1) else chartWidth / 2
-            
-            val pointsVoti = punti.mapIndexed { index, punto ->
-                val x = if (punti.size > 1) padding + index * stepX else width / 2
-                val y = (chartHeight + padding - (punto.voto - 18) * stepY)
-                Offset(x, y)
-            }
+        // Map relative coordinates (0..1) to actual pixel coordinates
+        val pointsVoti = puntiVotiRelativi.map { rel ->
+            Offset(
+                x = padding + rel.x * chartWidth,
+                y = chartHeight + padding - rel.y * chartHeight
+            )
+        }
 
-            val pointsMedia = punti.mapIndexed { index, punto ->
-                val x = if (punti.size > 1) padding + index * stepX else width / 2
-                val y = (chartHeight + padding - (punto.mediaPonderataProgressiva - 18) * stepY).toFloat()
-                Offset(x, y)
-            }
+        val pointsMedia = puntiMediaRelativi.map { rel ->
+            Offset(
+                x = padding + rel.x * chartWidth,
+                y = chartHeight + padding - rel.y * chartHeight
+            )
+        }
 
-            // Draw Media Line
-            if (pointsMedia.size > 1) {
-                val pathMedia = Path().apply {
-                    moveTo(pointsMedia[0].x, pointsMedia[0].y)
-                    for (i in 1 until pointsMedia.size) {
-                        lineTo(pointsMedia[i].x, pointsMedia[i].y)
-                    }
+        // Draw Media Line
+        if (pointsMedia.size > 1) {
+            val pathMedia = Path().apply {
+                moveTo(pointsMedia[0].x, pointsMedia[0].y)
+                for (i in 1 until pointsMedia.size) {
+                    lineTo(pointsMedia[i].x, pointsMedia[i].y)
                 }
-                drawPath(
-                    path = pathMedia,
-                    color = errorColor,
-                    style = Stroke(width = 2.dp.toPx())
-                )
             }
+            drawPath(
+                path = pathMedia,
+                color = errorColor,
+                style = Stroke(width = 2.dp.toPx())
+            )
+        }
 
-            // Draw Voti Points
-            pointsVoti.forEach { point ->
-                drawCircle(
-                    color = surfaceColor,
-                    radius = 5.dp.toPx(),
-                    center = point
-                )
-                drawCircle(
-                    color = primaryColor,
-                    radius = 5.dp.toPx(),
-                    center = point,
-                    style = Stroke(width = 2.dp.toPx())
-                )
-            }
-            
-            // Draw last Media Point as solid dot
-            if (pointsMedia.isNotEmpty()) {
-                drawCircle(
-                    color = errorColor,
-                    radius = 4.dp.toPx(),
-                    center = pointsMedia.last()
-                )
-            }
+        // Draw Voti Points
+        pointsVoti.forEach { point ->
+            drawCircle(
+                color = surfaceColor,
+                radius = 5.dp.toPx(),
+                center = point
+            )
+            drawCircle(
+                color = primaryColor,
+                radius = 5.dp.toPx(),
+                center = point,
+                style = Stroke(width = 2.dp.toPx())
+            )
+        }
+        
+        // Draw last Media Point as solid dot
+        if (pointsMedia.isNotEmpty()) {
+            drawCircle(
+                color = errorColor,
+                radius = 4.dp.toPx(),
+                center = pointsMedia.last()
+            )
         }
     }
 }
