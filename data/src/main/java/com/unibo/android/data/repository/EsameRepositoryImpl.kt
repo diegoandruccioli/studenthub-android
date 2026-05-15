@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 class EsameRepositoryImpl(context: Context) : EsameRepository {
 
@@ -34,7 +36,7 @@ class EsameRepositoryImpl(context: Context) : EsameRepository {
                     voto = esame.voto,
                     cfu = esame.cfu,
                     lode = esame.lode,
-                    data = toApiDate(esame.dataEsame)
+                    data = esame.dataEsame.format(DateTimeFormatter.ISO_LOCAL_DATE)
                 ))
             )
             if (response.isSuccessful) {
@@ -69,7 +71,7 @@ class EsameRepositoryImpl(context: Context) : EsameRepository {
                                 voto = dto.voto,
                                 lode = dto.lode,
                                 cfu = dto.cfu,
-                                dataEsame = dto.data,
+                                dataEsame = LocalDate.parse(dto.data),
                                 remoteId = dto.id,
                                 pendingSync = false
                             )
@@ -79,12 +81,5 @@ class EsameRepositoryImpl(context: Context) : EsameRepository {
             }
         }
         Unit
-    }
-
-    private fun toApiDate(date: String): String {
-        val parts = date.trim().split("/")
-        return if (parts.size == 3)
-            "${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}"
-        else date
     }
 }
