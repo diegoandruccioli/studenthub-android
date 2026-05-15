@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.School
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -39,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.unibo.android.domain.model.PuntoAndamento
+import com.unibo.android.domain.model.Statistiche
 import com.unibo.android.ui.R
 import java.util.Locale
 
@@ -47,8 +49,39 @@ fun StatisticheScreen(
     viewModel: StatisticheViewModel,
     modifier: Modifier = Modifier
 ) {
-    val stats by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    when (val state = uiState) {
+        is StatisticheUiState.Loading -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+        is StatisticheUiState.Empty -> {
+            StatisticheContent(
+                stats = null,
+                modifier = modifier
+            )
+        }
+        is StatisticheUiState.Success -> {
+            StatisticheContent(
+                stats = state.stats,
+                modifier = modifier
+            )
+        }
+        is StatisticheUiState.Error -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(text = state.message, color = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatisticheContent(
+    stats: Statistiche?,
+    modifier: Modifier = Modifier
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -56,6 +89,7 @@ fun StatisticheScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Breadcrumb and Titles
         Column {
             Text(
                 text = stringResource(R.string.statistiche_breadcrumb),
@@ -76,7 +110,7 @@ fun StatisticheScreen(
             )
         }
 
-        if (stats == null || stats?.cfuSostenuti == 0) {
+        if (stats == null) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -90,11 +124,10 @@ fun StatisticheScreen(
                 )
             }
         } else {
-            val s = stats!!
-
+            // Cards
             StatCard(
                 label = stringResource(R.string.statistiche_media_ponderata),
-                value = String.format(Locale.ITALY, "%.1f", s.mediaPonderata),
+                value = String.format(Locale.ITALY, "%.1f", stats.mediaPonderata),
                 icon = Icons.Outlined.School,
                 iconColor = MaterialTheme.colorScheme.primary,
                 iconBgColor = MaterialTheme.colorScheme.primaryContainer
@@ -102,7 +135,7 @@ fun StatisticheScreen(
 
             StatCard(
                 label = stringResource(R.string.statistiche_cfu_sostenuti),
-                value = s.cfuSostenuti.toString(),
+                value = stats.cfuSostenuti.toString(),
                 icon = Icons.Outlined.Checklist,
                 iconColor = MaterialTheme.colorScheme.tertiary,
                 iconBgColor = MaterialTheme.colorScheme.tertiaryContainer
@@ -110,12 +143,13 @@ fun StatisticheScreen(
 
             StatCard(
                 label = stringResource(R.string.statistiche_base_laurea),
-                value = String.format(Locale.ITALY, "%.1f", s.baseLaurea),
+                value = String.format(Locale.ITALY, "%.1f", stats.baseLaurea),
                 icon = Icons.Outlined.BarChart,
                 iconColor = MaterialTheme.colorScheme.secondary,
                 iconBgColor = MaterialTheme.colorScheme.secondaryContainer
             )
 
+            // Chart Section
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -124,7 +158,9 @@ fun StatisticheScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 shape = MaterialTheme.shapes.large
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -137,12 +173,12 @@ fun StatisticheScreen(
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             ChartLegendItem(
-                                color = MaterialTheme.colorScheme.primary,
+                                color = MaterialTheme.colorScheme.primary, 
                                 label = stringResource(R.string.statistiche_voti)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             ChartLegendItem(
-                                color = MaterialTheme.colorScheme.error,
+                                color = MaterialTheme.colorScheme.error, 
                                 label = stringResource(R.string.statistiche_media)
                             )
                         }
@@ -151,7 +187,7 @@ fun StatisticheScreen(
                     Spacer(modifier = Modifier.height(24.dp))
 
                     CareerChart(
-                        punti = s.andamentoCarriera,
+                        punti = stats.andamentoCarriera,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(200.dp)
@@ -159,7 +195,7 @@ fun StatisticheScreen(
                 }
             }
         }
-
+        
         Spacer(modifier = Modifier.height(64.dp))
     }
 }
@@ -241,10 +277,11 @@ fun CareerChart(
         val width = size.width
         val height = size.height
         val padding = 20.dp.toPx()
-
+        
         val chartWidth = width - padding * 2
         val chartHeight = height - padding * 2
 
+        // Grid lines (voti 18 to 30)
         val stepY = chartHeight / 12
         for (i in 0..12) {
             val y = chartHeight + padding - i * stepY
@@ -258,7 +295,7 @@ fun CareerChart(
 
         if (punti.isNotEmpty()) {
             val stepX = if (punti.size > 1) chartWidth / (punti.size - 1) else chartWidth / 2
-
+            
             val pointsVoti = punti.mapIndexed { index, punto ->
                 val x = if (punti.size > 1) padding + index * stepX else width / 2
                 val y = (chartHeight + padding - (punto.voto - 18) * stepY)
@@ -271,6 +308,7 @@ fun CareerChart(
                 Offset(x, y)
             }
 
+            // Draw Media Line
             if (pointsMedia.size > 1) {
                 val pathMedia = Path().apply {
                     moveTo(pointsMedia[0].x, pointsMedia[0].y)
@@ -285,8 +323,13 @@ fun CareerChart(
                 )
             }
 
+            // Draw Voti Points
             pointsVoti.forEach { point ->
-                drawCircle(color = surfaceColor, radius = 5.dp.toPx(), center = point)
+                drawCircle(
+                    color = surfaceColor,
+                    radius = 5.dp.toPx(),
+                    center = point
+                )
                 drawCircle(
                     color = primaryColor,
                     radius = 5.dp.toPx(),
@@ -294,9 +337,14 @@ fun CareerChart(
                     style = Stroke(width = 2.dp.toPx())
                 )
             }
-
+            
+            // Draw last Media Point as solid dot
             if (pointsMedia.isNotEmpty()) {
-                drawCircle(color = errorColor, radius = 4.dp.toPx(), center = pointsMedia.last())
+                drawCircle(
+                    color = errorColor,
+                    radius = 4.dp.toPx(),
+                    center = pointsMedia.last()
+                )
             }
         }
     }

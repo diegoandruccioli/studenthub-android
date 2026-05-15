@@ -26,6 +26,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.unibo.android.domain.di.RepositoryProvider
+import com.unibo.android.domain.usecase.GetStatisticheUseCase
 import com.unibo.android.ui.screens.auth.AuthViewModel
 import com.unibo.android.ui.screens.auth.LoginScreen
 import com.unibo.android.ui.screens.auth.RegisterScreen
@@ -36,6 +38,7 @@ import com.unibo.android.ui.screens.obiettivi.ObiettiviViewModel
 import com.unibo.android.ui.screens.statistiche.StatisticheScreen
 import com.unibo.android.ui.screens.statistiche.StatisticheViewModel
 import com.unibo.android.ui.theme.StudentHubTheme
+import androidx.compose.ui.platform.LocalContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,8 +86,18 @@ fun RootNavigation() {
 @Composable
 fun StudentHubApp() {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.LIBRETTO) }
+    
+    val context = LocalContext.current
+    val repositoryProvider = context.applicationContext as RepositoryProvider
+    val esameRepository = repositoryProvider.getEsameRepository()
+
     val librettoViewModel: LibrettoViewModel = viewModel()
-    val statisticheViewModel: StatisticheViewModel = viewModel()
+    
+    val statisticheViewModel: StatisticheViewModel = viewModel(
+        factory = StatisticheViewModel.provideFactory(
+            getStatisticheUseCase = GetStatisticheUseCase(esameRepository)
+        )
+    )
     val obiettiviViewModel: ObiettiviViewModel = viewModel()
 
     NavigationSuiteScaffold(
