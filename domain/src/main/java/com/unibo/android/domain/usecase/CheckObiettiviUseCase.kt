@@ -8,10 +8,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeParseException
 
 class CheckObiettiviUseCase(
     private val esameRepository: EsameRepository,
@@ -43,18 +40,11 @@ class CheckObiettiviUseCase(
     }
 
     private fun checkMaratoneta(esami: List<Esame>): Boolean {
-        val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
         val monthYearCounts = mutableMapOf<YearMonth, Int>()
 
         esami.forEach { esame ->
-            try {
-                val localDate = LocalDate.parse(esame.dataEsame, formatter)
-                val yearMonth = YearMonth.from(localDate)
-                monthYearCounts[yearMonth] = (monthYearCounts[yearMonth] ?: 0) + 1
-            } catch (e: DateTimeParseException) {
-                // Better to use a proper logger in a real app, for now we print to track
-                println("CheckObiettiviUseCase: Errore parsing data ${esame.dataEsame}")
-            }
+            val yearMonth = YearMonth.from(esame.dataEsame)
+            monthYearCounts[yearMonth] = (monthYearCounts[yearMonth] ?: 0) + 1
         }
 
         return monthYearCounts.values.any { it >= 3 }
