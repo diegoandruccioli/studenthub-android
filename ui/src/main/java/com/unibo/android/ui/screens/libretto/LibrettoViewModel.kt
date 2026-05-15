@@ -30,7 +30,7 @@ class LibrettoViewModel(application: Application) : AndroidViewModel(application
     private val addEsameUseCase = AddEsameUseCase(repository)
     private val updateEsameUseCase = UpdateEsameUseCase(repository)
     private val deleteEsameUseCase = DeleteEsameUseCase(repository)
-    private val checkObiettiviUseCase = CheckObiettiviUseCase(obiettivoRepository)
+    private val checkObiettiviUseCase = CheckObiettiviUseCase(repository, obiettivoRepository)
     private val refreshEsamiUseCase = RefreshEsamiUseCase(repository)
 
     private val _sortBy = MutableStateFlow(SortBy.DATA)
