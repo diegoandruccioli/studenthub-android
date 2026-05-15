@@ -24,4 +24,7 @@ interface ObiettivoDao {
 
     @Query("SELECT * FROM obiettivi WHERE id = :id")
     suspend fun getObiettivoById(id: Int): ObiettivoEntity?
+
+    @Query("UPDATE obiettivi SET completato = :completed WHERE id = :id")
+    suspend fun updateGoalCompletionStatus(id: Int, completed: Boolean)
 }
