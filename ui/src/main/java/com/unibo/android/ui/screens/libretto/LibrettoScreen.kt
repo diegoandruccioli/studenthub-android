@@ -38,6 +38,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.unibo.android.domain.model.Esame
 import com.unibo.android.ui.R
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 
 @Composable
 fun LibrettoScreen(
@@ -206,7 +209,9 @@ private fun EsameDialog(
     var nome by remember { mutableStateOf(initialEsame?.nome ?: "") }
     var voto by remember { mutableStateOf(initialEsame?.voto?.toString() ?: "") }
     var cfu by remember { mutableStateOf(initialEsame?.cfu?.toString() ?: "") }
-    var data by remember { mutableStateOf(initialEsame?.dataEsame ?: "") }
+    
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("dd/MM/yyyy") }
+    var data by remember { mutableStateOf(initialEsame?.dataEsame?.format(dateFormatter) ?: "") }
     var lode by remember { mutableStateOf(initialEsame?.lode ?: false) }
 
     val votoInt = voto.toIntOrNull() ?: 0
@@ -278,6 +283,13 @@ private fun EsameDialog(
                     if (nome.isBlank()) return@TextButton
                     if (votoInt !in 18..30) return@TextButton
                     if (cfuInt !in 1..48) return@TextButton
+                    
+                    val localDate = try {
+                        LocalDate.parse(data.trim(), dateFormatter)
+                    } catch (e: DateTimeParseException) {
+                        return@TextButton
+                    }
+
                     onConfirm(
                         Esame(
                             id = initialEsame?.id ?: 0,
@@ -285,7 +297,7 @@ private fun EsameDialog(
                             voto = votoInt,
                             lode = lode && votoInt == 30,
                             cfu = cfuInt,
-                            dataEsame = data.trim()
+                            dataEsame = localDate
                         )
                     )
                 }
