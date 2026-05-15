@@ -18,5 +18,7 @@ fun Esame.toEntity(): EsameEntity = EsameEntity(
     voto = voto,
     lode = lode,
     cfu = cfu,
-    dataEsame = dataEsame
+    dataEsame = dataEsame,
+    remoteId = null,
+    pendingSync = true
 )
