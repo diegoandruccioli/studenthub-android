@@ -67,12 +67,15 @@ class StatisticheViewModel(
         }
 
         // Utilizzo del Locale iniettato per rispettare i principi di internazionalizzazione
+        val yMediaFissa = (stats.mediaPonderata.toFloat() - minVoto) / range
+
         return StatisticheUiModel(
             mediaPonderata = String.format(locale, "%.1f", stats.mediaPonderata),
             cfuSostenuti = stats.cfuSostenuti.toString(),
             baseLaurea = String.format(locale, "%.1f", stats.baseLaurea),
             puntiVoti = puntiVoti,
-            puntiMedia = puntiMedia
+            puntiMedia = puntiMedia,
+            yMediaFissa = yMediaFissa.coerceIn(0f, 1f)
         )
     }
 

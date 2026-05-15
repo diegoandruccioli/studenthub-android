@@ -34,7 +34,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -187,6 +191,7 @@ private fun StatisticheContent(
                     CareerChart(
                         puntiVotiRelativi = uiModel.puntiVoti,
                         puntiMediaRelativi = uiModel.puntiMedia,
+                        yMediaFissaRelativa = uiModel.yMediaFissa,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(200.dp)
@@ -266,12 +271,19 @@ fun ChartLegendItem(color: Color, label: String) {
 fun CareerChart(
     puntiVotiRelativi: List<OffsetRelativo>,
     puntiMediaRelativi: List<OffsetRelativo>,
+    yMediaFissaRelativa: Float,
     modifier: Modifier = Modifier
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
     val errorColor = MaterialTheme.colorScheme.error
     val outlineVariantColor = MaterialTheme.colorScheme.outlineVariant
     val surfaceColor = MaterialTheme.colorScheme.surface
+
+    // Animazione per l'ingresso fluido delle linee e dei punti
+    val animationProgress = remember { Animatable(0f) }
+    LaunchedEffect(puntiVotiRelativi) {
+        animationProgress.animateTo(1f, animationSpec = tween(durationMillis = 1000))
+    }
 
     Canvas(modifier = modifier) {
         val width = size.width
@@ -280,8 +292,9 @@ fun CareerChart(
         
         val chartWidth = width - padding * 2
         val chartHeight = height - padding * 2
+        val progress = animationProgress.value
 
-        // Grid lines - Still UI concern (how many lines), but independent of values
+        // Grid lines
         val numGridLines = 12
         val stepY = chartHeight / numGridLines
         for (i in 0..numGridLines) {
@@ -294,57 +307,70 @@ fun CareerChart(
             )
         }
 
-        // Map relative coordinates (0..1) to actual pixel coordinates
+        // 1. Linea Media Fissa (Orizzontale parallela alle ascisse)
+        // Viene disegnata con un PathEffect tratteggiato per distinguerla dallo storico
+        val yMediaFissaPixel = chartHeight + padding - (yMediaFissaRelativa * chartHeight)
+        drawLine(
+            color = errorColor.copy(alpha = 0.4f * progress),
+            start = Offset(padding, yMediaFissaPixel),
+            end = Offset(padding + (chartWidth * progress), yMediaFissaPixel),
+            strokeWidth = 2.dp.toPx(),
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+        )
+
+        // Map relative coordinates to pixel coordinates
         val pointsVoti = puntiVotiRelativi.map { rel ->
             Offset(
-                x = padding + rel.x * chartWidth,
-                y = chartHeight + padding - rel.y * chartHeight
+                padding + rel.x * chartWidth,
+                chartHeight + padding - rel.y * chartHeight
             )
         }
 
         val pointsMedia = puntiMediaRelativi.map { rel ->
             Offset(
-                x = padding + rel.x * chartWidth,
-                y = chartHeight + padding - rel.y * chartHeight
+                padding + rel.x * chartWidth,
+                chartHeight + padding - rel.y * chartHeight
             )
         }
 
-        // Draw Media Line
+        // 2. Storico Media (Andamento dinamico)
         if (pointsMedia.size > 1) {
             val pathMedia = Path().apply {
                 moveTo(pointsMedia[0].x, pointsMedia[0].y)
-                for (i in 1 until pointsMedia.size) {
+                for (i in 1 until (pointsMedia.size * progress).toInt().coerceIn(1, pointsMedia.size)) {
                     lineTo(pointsMedia[i].x, pointsMedia[i].y)
                 }
             }
             drawPath(
                 path = pathMedia,
-                color = errorColor,
+                color = errorColor.copy(alpha = progress),
                 style = Stroke(width = 2.dp.toPx())
             )
         }
 
-        // Draw Voti Points
-        pointsVoti.forEach { point ->
-            drawCircle(
-                color = surfaceColor,
-                radius = 5.dp.toPx(),
-                center = point
-            )
-            drawCircle(
-                color = primaryColor,
-                radius = 5.dp.toPx(),
-                center = point,
-                style = Stroke(width = 2.dp.toPx())
-            )
+        // 3. Punti Voti Singoli
+        pointsVoti.forEachIndexed { index, point ->
+            if (index < pointsVoti.size * progress) {
+                drawCircle(
+                    color = surfaceColor,
+                    radius = 5.dp.toPx(),
+                    center = point
+                )
+                drawCircle(
+                    color = primaryColor,
+                    radius = 5.dp.toPx(),
+                    center = point,
+                    style = Stroke(width = 2.dp.toPx())
+                )
+            }
         }
         
-        // Draw last Media Point as solid dot
-        if (pointsMedia.isNotEmpty()) {
+        // Indicatore finale sulla media fissa
+        if (progress == 1f && pointsMedia.isNotEmpty()) {
             drawCircle(
                 color = errorColor,
                 radius = 4.dp.toPx(),
-                center = pointsMedia.last()
+                center = Offset(padding + chartWidth, yMediaFissaPixel)
             )
         }
     }
