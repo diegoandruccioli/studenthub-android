@@ -16,32 +16,19 @@ class GetStatisticheUseCase(
     private val repository: EsameRepository,
     private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) {
-    private val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-
     operator fun invoke(): Flow<Result<Statistiche>> = repository.getEsami().map { esami ->
         try {
             if (esami.isEmpty()) {
                 return@map Result.success(Statistiche(0.0, 0, 0.0, emptyList()))
             }
 
-            // Mappatura esplicita con gestione dell'integrità dei dati
-            val esamiOrdinati = esami.map { esame ->
-                try {
-                    esame to LocalDate.parse(esame.dataEsame, dateFormatter)
-                } catch (e: DateTimeParseException) {
-                    // Sradicamento del Silent Failure: se un dato è invalido, il calcolo fallisce esplicitamente
-                    return@map Result.failure<Statistiche>(
-                        IllegalStateException("Integrità dati violata: data non valida per l'esame '${esame.nome}'")
-                    )
-                }
-            }.filterIsInstance<Pair<com.unibo.android.domain.model.Esame, LocalDate>>()
-             .sortedBy { it.second }
+            val esamiOrdinati = esami.sortedBy { it.dataEsame }
 
             var sommaProdotti = 0.0
             var sommaCfu = 0
             val andamento = mutableListOf<PuntoAndamento>()
 
-            esamiOrdinati.forEach { (esame, _) ->
+            esamiOrdinati.forEach { esame ->
                 sommaCfu += esame.cfu
                 sommaProdotti += esame.voto * esame.cfu
                 val mediaCorrente = if (sommaCfu > 0) sommaProdotti / sommaCfu else 0.0
