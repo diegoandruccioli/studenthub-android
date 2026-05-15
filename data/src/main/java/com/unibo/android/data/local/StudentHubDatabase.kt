@@ -9,9 +9,6 @@ import com.unibo.android.data.local.dao.EsameDao
 import com.unibo.android.data.local.dao.ObiettivoDao
 import com.unibo.android.data.local.entity.EsameEntity
 import com.unibo.android.data.local.entity.ObiettivoEntity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Database(entities = [EsameEntity::class, ObiettivoEntity::class], version = 3)
 abstract class StudentHubDatabase : RoomDatabase() {
@@ -33,28 +30,23 @@ abstract class StudentHubDatabase : RoomDatabase() {
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
-                        prepopulate(context)
+                        insertInitialObiettivi(db)
                     }
 
                     override fun onDestructiveMigration(db: SupportSQLiteDatabase) {
                         super.onDestructiveMigration(db)
-                        prepopulate(context)
+                        insertInitialObiettivi(db)
                     }
 
-                    private fun prepopulate(context: Context) {
-                        CoroutineScope(Dispatchers.IO).launch {
-                            val dao = getInstance(context).obiettiviDao()
-                            if (dao.getAllObiettiviSync().isEmpty()) {
-                                dao.insertObiettivi(
-                                    listOf(
-                                        ObiettivoEntity(1, "Primo Passo", "Registra il tuo primo esame superato", false, 150),
-                                        ObiettivoEntity(2, "Secchione", "Ottieni la tua prima Lode", false, 300),
-                                        ObiettivoEntity(3, "Maratoneta", "Supera 3 esami in un mese", false, 500),
-                                        ObiettivoEntity(4, "Giro di Boa", "Raggiungi 90 CFU", false, 800)
-                                    )
-                                )
-                            }
-                        }
+                    private fun insertInitialObiettivi(db: SupportSQLiteDatabase) {
+                        db.execSQL("""
+                            INSERT INTO obiettivi (id, nome, descrizione, completato, premio_xp) 
+                            VALUES 
+                            (1, 'Primo Passo', 'Registra il tuo primo esame superato', 0, 150),
+                            (2, 'Secchione', 'Ottieni la tua prima Lode', 0, 300),
+                            (3, 'Maratoneta', 'Supera 3 esami in un mese', 0, 500),
+                            (4, 'Giro di Boa', 'Raggiungi 90 CFU', 0, 800)
+                        """.trimIndent())
                     }
                 })
                 .build().also { INSTANCE = it }
