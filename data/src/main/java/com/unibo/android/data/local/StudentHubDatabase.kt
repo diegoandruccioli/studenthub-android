@@ -43,14 +43,17 @@ abstract class StudentHubDatabase : RoomDatabase() {
 
                     private fun prepopulate(context: Context) {
                         CoroutineScope(Dispatchers.IO).launch {
-                            getInstance(context).obiettiviDao().insertObiettivi(
-                                listOf(
-                                    ObiettivoEntity(1, "Primo Passo", "Registra il tuo primo esame superato", false, 150),
-                                    ObiettivoEntity(2, "Secchione", "Ottieni la tua prima Lode", false, 300),
-                                    ObiettivoEntity(3, "Maratoneta", "Supera 3 esami in un mese", false, 500),
-                                    ObiettivoEntity(4, "Giro di Boa", "Raggiungi 90 CFU", false, 800)
+                            val dao = getInstance(context).obiettiviDao()
+                            if (dao.getAllObiettiviSync().isEmpty()) {
+                                dao.insertObiettivi(
+                                    listOf(
+                                        ObiettivoEntity(1, "Primo Passo", "Registra il tuo primo esame superato", false, 150),
+                                        ObiettivoEntity(2, "Secchione", "Ottieni la tua prima Lode", false, 300),
+                                        ObiettivoEntity(3, "Maratoneta", "Supera 3 esami in un mese", false, 500),
+                                        ObiettivoEntity(4, "Giro di Boa", "Raggiungi 90 CFU", false, 800)
+                                    )
                                 )
-                            )
+                            }
                         }
                     }
                 })
