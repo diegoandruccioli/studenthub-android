@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.unibo.android.data.local.dao.EsameDao
 import com.unibo.android.data.local.dao.ObiettivoDao
@@ -11,6 +12,7 @@ import com.unibo.android.data.local.entity.EsameEntity
 import com.unibo.android.data.local.entity.ObiettivoEntity
 
 @Database(entities = [EsameEntity::class, ObiettivoEntity::class], version = 3)
+@TypeConverters(Converters::class)
 abstract class StudentHubDatabase : RoomDatabase() {
 
     abstract fun esameDao(): EsameDao
