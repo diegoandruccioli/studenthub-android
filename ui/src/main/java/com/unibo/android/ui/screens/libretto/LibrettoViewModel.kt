@@ -45,7 +45,7 @@ class LibrettoViewModel(application: Application) : AndroidViewModel(application
         _sortOrder
     ) { lista, by, order ->
         val sorted = when (by) {
-            SortBy.DATA -> lista.sortedBy { it.dataEsame.toSortableDate() }
+            SortBy.DATA -> lista.sortedBy { it.dataEsame }
             SortBy.VOTO -> lista.sortedBy { it.voto }
             SortBy.CFU -> lista.sortedBy { it.cfu }
         }
@@ -78,11 +78,5 @@ class LibrettoViewModel(application: Application) : AndroidViewModel(application
             deleteEsameUseCase(esame)
             checkObiettiviUseCase()
         }
-    }
-
-    private fun String.toSortableDate(): String {
-        val parts = split("/")
-        return if (parts.size == 3) "${parts[2]}${parts[1].padStart(2,'0')}${parts[0].padStart(2,'0')}"
-        else this
     }
 }
