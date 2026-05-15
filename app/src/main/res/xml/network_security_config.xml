@@ -2,8 +2,7 @@
 <network-security-config>
     <!-- Consente HTTP in chiaro verso l'host dell'emulatore (backend locale Docker porta 3010) -->
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">172.20.10.5</domain>
-        <domain includeSubdomains="true">localhost</domain>
         <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">localhost</domain>
     </domain-config>
 </network-security-config>
