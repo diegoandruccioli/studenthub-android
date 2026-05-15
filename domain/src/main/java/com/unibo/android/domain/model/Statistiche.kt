@@ -1,5 +1,7 @@
 package com.unibo.android.domain.model
 
+import java.time.LocalDate
+
 data class Statistiche(
     val mediaPonderata: Double,
     val cfuSostenuti: Int,
@@ -8,7 +10,7 @@ data class Statistiche(
 )
 
 data class PuntoAndamento(
-    val data: String,
+    val data: LocalDate,
     val voto: Int,
     val mediaPonderataProgressiva: Double
 )
