@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import com.unibo.android.domain.model.Esame
 import com.unibo.android.ui.R
 import com.unibo.android.ui.theme.StudentHubTheme
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun EsameCard(
@@ -35,6 +37,8 @@ fun EsameCard(
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+    
     Card(
         modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -52,7 +56,7 @@ fun EsameCard(
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "${esame.cfu} CFU · ${esame.dataEsame}",
+                    text = "${esame.cfu} CFU · ${esame.dataEsame.format(dateFormatter)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -97,7 +101,14 @@ fun EsameCard(
 private fun EsameCardPreview() {
     StudentHubTheme {
         EsameCard(
-            esame = Esame(id = 1, nome = "Sistemi Mobili", voto = 30, lode = true, cfu = 6, dataEsame = "15/06/2025"),
+            esame = Esame(
+                id = 1, 
+                nome = "Sistemi Mobili", 
+                voto = 30, 
+                lode = true, 
+                cfu = 6, 
+                dataEsame = LocalDate.of(2025, 6, 15)
+            ),
             onEditClick = {},
             onDeleteClick = {}
         )
