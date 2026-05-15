@@ -11,7 +11,7 @@ import com.unibo.android.data.local.dao.ObiettivoDao
 import com.unibo.android.data.local.entity.EsameEntity
 import com.unibo.android.data.local.entity.ObiettivoEntity
 
-@Database(entities = [EsameEntity::class, ObiettivoEntity::class], version = 3)
+@Database(entities = [EsameEntity::class, ObiettivoEntity::class], version = 10)
 @TypeConverters(Converters::class)
 abstract class StudentHubDatabase : RoomDatabase() {
 
@@ -30,19 +30,11 @@ abstract class StudentHubDatabase : RoomDatabase() {
                 )
                 .fallbackToDestructiveMigration(true)
                 .addCallback(object : Callback() {
-                    override fun onCreate(db: SupportSQLiteDatabase) {
-                        super.onCreate(db)
-                        insertInitialObiettivi(db)
-                    }
-
-                    override fun onDestructiveMigration(db: SupportSQLiteDatabase) {
-                        super.onDestructiveMigration(db)
-                        insertInitialObiettivi(db)
-                    }
-
-                    private fun insertInitialObiettivi(db: SupportSQLiteDatabase) {
+                    override fun onOpen(db: SupportSQLiteDatabase) {
+                        super.onOpen(db)
+                        // Inserimento sicuro post-creazione tabelle
                         db.execSQL("""
-                            INSERT INTO obiettivi (id, nome, descrizione, completato, premio_xp) 
+                            INSERT OR IGNORE INTO obiettivi (id, nome, descrizione, completato, premio_xp)
                             VALUES 
                             (1, 'Primo Passo', 'Registra il tuo primo esame superato', 0, 150),
                             (2, 'Secchione', 'Ottieni la tua prima Lode', 0, 300),
