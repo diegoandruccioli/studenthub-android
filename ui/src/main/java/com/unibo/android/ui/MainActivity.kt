@@ -39,6 +39,8 @@ import com.unibo.android.ui.screens.statistiche.StatisticheScreen
 import com.unibo.android.ui.screens.statistiche.StatisticheViewModel
 import com.unibo.android.ui.theme.StudentHubTheme
 import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -95,7 +97,11 @@ fun StudentHubApp() {
     
     val statisticheViewModel: StatisticheViewModel = viewModel(
         factory = StatisticheViewModel.provideFactory(
-            getStatisticheUseCase = GetStatisticheUseCase(esameRepository)
+            getStatisticheUseCase = GetStatisticheUseCase(
+                repository = esameRepository,
+                defaultDispatcher = Dispatchers.Default // Iniezione del dispatcher per testabilità e main-safety
+            ),
+            locale = Locale.getDefault() // Iniezione del Locale per internazionalizzazione
         )
     )
     val obiettiviViewModel: ObiettiviViewModel = viewModel()

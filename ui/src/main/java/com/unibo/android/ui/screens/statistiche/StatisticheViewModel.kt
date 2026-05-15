@@ -13,7 +13,8 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 
 class StatisticheViewModel(
-    private val getStatisticheUseCase: GetStatisticheUseCase
+    private val getStatisticheUseCase: GetStatisticheUseCase,
+    private val locale: Locale = Locale.getDefault()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<StatisticheUiState>(StatisticheUiState.Loading)
@@ -27,23 +28,22 @@ class StatisticheViewModel(
         viewModelScope.launch {
             getStatisticheUseCase()
                 .catch { e ->
-                    _uiState.value = StatisticheUiState.Error(e.message ?: "Errore sconosciuto")
+                    _uiState.value = StatisticheUiState.Error(e.message ?: "Errore di sistema")
                 }
-                .collect { stats ->
-                    _uiState.value = if (stats.cfuSostenuti == 0) {
-                        StatisticheUiState.Empty
-                    } else {
-                        StatisticheUiState.Success(toUiModel(stats))
+                .collect { result ->
+                    result.onSuccess { stats ->
+                        _uiState.value = if (stats.cfuSostenuti == 0) {
+                            StatisticheUiState.Empty
+                        } else {
+                            StatisticheUiState.Success(toUiModel(stats))
+                        }
+                    }.onFailure { error ->
+                        _uiState.value = StatisticheUiState.Error(error.message ?: "Errore integrità dati")
                     }
                 }
         }
     }
 
-    /**
-     * Trasforma il modello di dominio in un modello di visualizzazione (UI Model).
-     * Qui avviene la proiezione: formattazione stringhe e normalizzazione punti grafico (0.0 - 1.0).
-     * La logica di "business grafico" (range 18-30) muore qui e non entra nella View.
-     */
     private fun toUiModel(stats: Statistiche): StatisticheUiModel {
         val minVoto = 18f
         val maxVoto = 30f
@@ -66,21 +66,25 @@ class StatisticheViewModel(
             )
         }
 
+        // Utilizzo del Locale iniettato per rispettare i principi di internazionalizzazione
         return StatisticheUiModel(
-            mediaPonderata = String.format(Locale.ITALY, "%.1f", stats.mediaPonderata),
+            mediaPonderata = String.format(locale, "%.1f", stats.mediaPonderata),
             cfuSostenuti = stats.cfuSostenuti.toString(),
-            baseLaurea = String.format(Locale.ITALY, "%.1f", stats.baseLaurea),
+            baseLaurea = String.format(locale, "%.1f", stats.baseLaurea),
             puntiVoti = puntiVoti,
             puntiMedia = puntiMedia
         )
     }
 
     companion object {
-        fun provideFactory(getStatisticheUseCase: GetStatisticheUseCase): ViewModelProvider.Factory =
+        fun provideFactory(
+            getStatisticheUseCase: GetStatisticheUseCase,
+            locale: Locale = Locale.getDefault()
+        ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return StatisticheViewModel(getStatisticheUseCase) as T
+                    return StatisticheViewModel(getStatisticheUseCase, locale) as T
                 }
             }
     }
