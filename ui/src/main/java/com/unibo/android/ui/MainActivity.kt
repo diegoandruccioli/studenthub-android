@@ -27,6 +27,7 @@ import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.unibo.android.domain.di.RepositoryProvider
+import com.unibo.android.domain.usecase.GetObiettiviUseCase
 import com.unibo.android.domain.usecase.GetStatisticheUseCase
 import com.unibo.android.ui.screens.auth.AuthViewModel
 import com.unibo.android.ui.screens.auth.LoginScreen
@@ -92,6 +93,7 @@ fun StudentHubApp() {
     val context = LocalContext.current
     val repositoryProvider = context.applicationContext as RepositoryProvider
     val esameRepository = repositoryProvider.getEsameRepository()
+    val obiettivoRepository = repositoryProvider.getObiettivoRepository()
 
     val librettoViewModel: LibrettoViewModel = viewModel()
     
@@ -99,12 +101,20 @@ fun StudentHubApp() {
         factory = StatisticheViewModel.provideFactory(
             getStatisticheUseCase = GetStatisticheUseCase(
                 repository = esameRepository,
-                defaultDispatcher = Dispatchers.Default // Iniezione del dispatcher per testabilità e main-safety
+                defaultDispatcher = Dispatchers.Default
             ),
-            locale = Locale.getDefault() // Iniezione del Locale per internazionalizzazione
+            locale = Locale.getDefault()
         )
     )
-    val obiettiviViewModel: ObiettiviViewModel = viewModel()
+
+    val obiettiviViewModel: ObiettiviViewModel = viewModel(
+        factory = ObiettiviViewModel.provideFactory(
+            getObiettiviUseCase = GetObiettiviUseCase(
+                repository = obiettivoRepository,
+                defaultDispatcher = Dispatchers.Default
+            )
+        )
+    )
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
