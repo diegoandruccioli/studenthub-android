@@ -24,10 +24,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -41,6 +43,23 @@ fun ObiettiviScreen(
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadObiettivi()
+    }
+
+    ObiettiviScreenContent(
+        uiState = uiState,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun ObiettiviScreenContent(
+    uiState: ObiettiviUiState,
+    modifier: Modifier = Modifier
+) {
+    val blueColor = Color(0xFF1A5A96)
 
     Column(
         modifier = modifier

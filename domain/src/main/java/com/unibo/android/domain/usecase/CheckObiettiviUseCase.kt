@@ -20,9 +20,12 @@ class CheckObiettiviUseCase(
 ) {
     suspend operator fun invoke() = withContext(defaultDispatcher) {
         val esami = esameRepository.getEsami().first()
+        val obiettiviAttuali = obiettivoRepository.getObiettivi().first()
 
         evaluators.forEach { evaluator ->
-            if (evaluator.evaluate(esami)) {
+            val isAlreadyCompleted = obiettiviAttuali.find { it.id == evaluator.goalId }?.completato == true
+            
+            if (!isAlreadyCompleted && evaluator.evaluate(esami)) {
                 obiettivoRepository.updateGoalCompletion(evaluator.goalId, true)
             }
         }

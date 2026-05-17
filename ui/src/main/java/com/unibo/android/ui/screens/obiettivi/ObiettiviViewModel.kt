@@ -17,12 +17,9 @@ class ObiettiviViewModel(
     private val _uiState = MutableStateFlow<ObiettiviUiState>(ObiettiviUiState.Loading)
     val uiState: StateFlow<ObiettiviUiState> = _uiState.asStateFlow()
 
-    init {
-        loadObiettivi()
-    }
-
-    private fun loadObiettivi() {
+    fun loadObiettivi() {
         viewModelScope.launch {
+            _uiState.value = ObiettiviUiState.Loading
             getObiettiviUseCase()
                 .catch { e ->
                     _uiState.value = ObiettiviUiState.Error(e.message ?: "Errore di sistema")
