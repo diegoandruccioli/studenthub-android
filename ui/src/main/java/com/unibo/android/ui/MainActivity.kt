@@ -110,8 +110,7 @@ fun StudentHubApp() {
     val obiettiviViewModel: ObiettiviViewModel = viewModel(
         factory = ObiettiviViewModel.provideFactory(
             getObiettiviUseCase = GetObiettiviUseCase(
-                repository = obiettivoRepository,
-                defaultDispatcher = Dispatchers.Default
+                repository = obiettivoRepository
             )
         )
     )
