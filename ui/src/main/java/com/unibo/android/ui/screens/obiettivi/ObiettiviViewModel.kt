@@ -4,31 +4,28 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.unibo.android.domain.usecase.GetObiettiviUseCase
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 
 class ObiettiviViewModel(
     private val getObiettiviUseCase: GetObiettiviUseCase
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<ObiettiviUiState>(ObiettiviUiState.Loading)
-    val uiState: StateFlow<ObiettiviUiState> = _uiState.asStateFlow()
-
-    fun loadObiettivi() {
-        viewModelScope.launch {
-            _uiState.value = ObiettiviUiState.Loading
-            getObiettiviUseCase()
-                .catch { e ->
-                    _uiState.value = ObiettiviUiState.Error(e.message ?: "Errore di sistema")
-                }
-                .collect { lista ->
-                    _uiState.value = ObiettiviUiState.Success(lista)
-                }
+    val uiState: StateFlow<ObiettiviUiState> = getObiettiviUseCase()
+        .map { lista ->
+            ObiettiviUiState.Success(lista) as ObiettiviUiState
         }
-    }
+        .catch { e ->
+            emit(ObiettiviUiState.Error(e.message ?: "Errore di sistema"))
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = ObiettiviUiState.Loading
+        )
 
     companion object {
         fun provideFactory(
