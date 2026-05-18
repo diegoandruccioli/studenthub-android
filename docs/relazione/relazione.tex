@@ -85,7 +85,8 @@
     \item Eliminare un esame dal libretto.
     \item Visualizzare le statistiche della propria carriera (media ponderata, CFU totali, base di laurea, grafico andamento voti).
     \item Monitorare il completamento degli obiettivi di gamification e i punti XP guadagnati.
-    % [DA COMPLETARE — aggiungere man mano che le feature vengono implementate]
+    \item Personalizzare le impostazioni dell'account (tema di colorazione dei voti, soglie RGB) nella schermata Profilo.
+    \item Effettuare il logout dalla schermata Profilo; la sessione viene invalidata sia localmente che sul server.
 \end{itemize}
 
 \section{Requisiti Minimi del Corso}
@@ -235,19 +236,33 @@ NavigationSuiteScaffold(
     }
 ) {
     when (currentDestination) {
-        AppDestinations.LIBRETTO -> LibrettoScreen(viewModel = librettoViewModel)
-        ...
+        AppDestinations.LIBRETTO     -> LibrettoScreen(viewModel = librettoViewModel)
+        AppDestinations.STATISTICHE  -> StatisticheScreen(viewModel = statisticheViewModel)
+        AppDestinations.OBIETTIVI    -> ObiettiviScreen(viewModel = obiettiviViewModel)
+        AppDestinations.PROFILO      -> ProfiloScreen(viewModel = profiloViewModel)
     }
 }
 \end{lstlisting}
 
-Il \texttt{LibrettoViewModel} (che estende \texttt{AndroidViewModel}) viene creato
-con \texttt{viewModel()} di \texttt{lifecycle-viewmodel-compose}: Android assegna
-automaticamente l'istanza di \texttt{Application} al costruttore, mantenendo
-compatibilità con il pattern \texttt{RepositoryProvider} già definito nel modulo
-\texttt{:app}. Il ViewModel sopravvive ai cambi di configurazione (rotazione dello
-schermo, ridimensionamento finestra su desktop) esattamente come nelle versioni
-Views/XML.
+Tutti i ViewModel dell'applicazione utilizzano il pattern \texttt{ViewModelProvider.Factory}
+con dependency injection manuale: il composable ospitante recupera i repository dal
+\texttt{RepositoryProvider} (implementato da \texttt{CustomApplication}) e li passa
+alla factory. Questo approccio migliora la testabilità — i ViewModel non dipendono
+da \texttt{Application} e possono essere istanziati in unit test con dipendenze
+fittizie — e garantisce un DI omogeneo nell'intero layer UI:
+
+\begin{lstlisting}
+val profiloViewModel: ProfiloViewModel = viewModel(
+    factory = ProfiloViewModel.provideFactory(
+        getSettingsUseCase = GetSettingsUseCase(settingsRepository),
+        updateSettingsUseCase = UpdateSettingsUseCase(settingsRepository),
+        logoutUseCase = LogoutUseCase(authRepository)
+    )
+)
+\end{lstlisting}
+
+Ogni ViewModel sopravvive ai cambi di configurazione (rotazione schermo,
+ridimensionamento finestra su desktop) grazie al meccanismo standard di Jetpack.
 
 \section{Autenticazione e gestione della sessione utente}
 
@@ -298,11 +313,130 @@ Il layer UI introduce tre componenti M3 non usati in precedenza:
 \texttt{CircularProgressIndicator} durante la chiamata di rete,
 e \texttt{Snackbar} per i messaggi di errore restituiti dal server in italiano.
 
+Il logout è implementato seguendo lo stesso pattern dichiarativo.
+\texttt{LogoutUseCase} delega a \texttt{AuthRepository.logout()}, che chiama
+\texttt{POST /api/auth/logout} (revoca il refresh token lato server)
+e imposta il flag DataStore a \texttt{false}. Il codice di rete è avvolto in
+\texttt{runCatching}: anche se il backend non è raggiungibile, la sessione locale
+viene comunque invalidata — si preferisce un logout locale garantito a un logout
+condizionato alla disponibilità della rete.
+\texttt{AuthViewModel} espone \texttt{isLoggingOut: StateFlow<Boolean>}
+per disabilitare il pulsante e mostrare un indicatore di caricamento durante
+la breve operazione asincrona. Non è necessaria nessuna navigazione imperativa:
+quando il DataStore emette \texttt{false}, \texttt{RootNavigation} torna
+automaticamente alla schermata di login — lo stesso meccanismo reattivo usato
+per l'accesso.
+Il pulsante logout è posizionato nella schermata \texttt{ProfiloScreen},
+dedicata alle impostazioni utente. Il \texttt{ProfiloViewModel} espone
+\texttt{isLoggingOut: StateFlow<Boolean>} per disabilitare il pulsante
+durante l'operazione asincrona.
+
+\section{Rinnovamento automatico del token JWT}
+
+\paragraph{Problema}
+Il backend emette un access token JWT con scadenza breve (15 minuti) e
+un refresh token con scadenza settimanale, entrambi in cookie HTTP-only.
+Senza gestione esplicita, alla scadenza dell'access token tutte le chiamate
+API cominciano a restituire 401, rendendo l'app inutilizzabile senza un
+logout e login manuali.
+
+\paragraph{Soluzione}
+È stato implementato un \texttt{Authenticator} OkHttp (\texttt{TokenAuthenticator})
+che intercetta automaticamente ogni risposta 401. L'authenticator esegue
+una chiamata sincrona a \texttt{POST /api/auth/refresh}: il \texttt{CookieJar}
+invia il refresh token già presente in memoria e riceve in risposta i cookie
+aggiornati, che vengono salvati automaticamente. OkHttp ritenta quindi la
+request originale — ora autorizzata — senza che il codice applicativo ne sia
+consapevole. Se il refresh fallisce (refresh token scaduto), l'authenticator
+invalida la sessione tramite \texttt{SessionDataStore.setLoggedIn(false)}:
+\texttt{RootNavigation} porta l'utente alla schermata di login in modo reattivo,
+senza alcuna navigazione imperativa. Una guardia blocca i loop di retry:
+se la request che ha fallito con 401 è già la \texttt{/auth/refresh},
+l'authenticator restituisce \texttt{null} immediatamente.
+
+\section{Sincronizzazione offline-first con WorkManager}
+
+\paragraph{Problema}
+L'utente deve poter inserire e modificare esami anche senza connessione.
+Le operazioni offline non devono andare perse quando la rete torna disponibile,
+anche se l'app è stata chiusa nel frattempo.
+
+\paragraph{Soluzione}
+Ogni \texttt{EsameEntity} in Room espone il campo \texttt{pendingSync: Boolean}
+(default \texttt{true}). Quando la rete è disponibile, la Request viene
+inviata immediatamente (add/update/delete tramite Retrofit) e
+\texttt{markSynced()} aggiorna \texttt{pending\_sync = 0} e salva il
+\texttt{remote\_id} assegnato dal server.
+Per il caso offline, \texttt{SyncExamsWorker} (un \texttt{CoroutineWorker})
+viene schedulato con \texttt{WorkManager.enqueueUniquePeriodicWork} con constraint
+\texttt{NetworkType.CONNECTED}: si esegue ogni ora ma solo quando la connessione
+è disponibile, anche a app chiusa. Il worker legge dalla DAO tutti i record con
+\texttt{pendingSync = true} e per ognuno chiama l'endpoint corretto: POST se
+\texttt{remoteId == null} (mai sincronizzato), PUT se \texttt{remoteId != null}
+(esame già esistente sul server, modificato offline). In caso di errore di rete
+restituisce \texttt{Result.retry()}: WorkManager riproverà automaticamente
+con backoff esponenziale.
+
+\section{Gestione dello stato durante operazioni asincrone nella UI}
+
+\paragraph{Problema}
+Durante il salvataggio delle impostazioni nella \texttt{ProfiloScreen}, il ViewModel
+transita attraverso uno stato intermedio. Una prima implementazione usava uno stato
+\texttt{Saving} privo di dati e recuperava le impostazioni correnti accedendo
+direttamente a \texttt{viewModel.uiState.value} all'interno del composable.
+Questo approccio aggira il meccanismo reattivo di Compose: l'accesso diretto a
+\texttt{.value} non registra una dipendenza di recomposition e può restituire
+uno snapshot stantio se lo stato cambia tra due riesecuzioni della funzione composable.
+
+\paragraph{Soluzione}
+La sealed class \texttt{ProfiloUiState} è stata ristrutturata in modo che ogni
+stato porti con sé tutti i dati necessari alla UI, eliminando qualsiasi accesso
+diretto al flusso dello stato:
+
+\begin{lstlisting}
+sealed class ProfiloUiState {
+    object Loading : ProfiloUiState()
+    data class Success(val settings: Settings) : ProfiloUiState()
+    data class Saving(val previousSettings: Settings) : ProfiloUiState()
+    data class Error(val message: String) : ProfiloUiState()
+}
+\end{lstlisting}
+
+Quando l'utente avvia il salvataggio, il ViewModel transita a \texttt{Saving(settings)}
+portando le impostazioni correnti. Il composable mostra il form disabilitato con
+un \texttt{CircularProgressIndicator} nel bottone senza dover accedere ad altri
+\texttt{StateFlow}. Al termine dell'operazione il ViewModel emette \texttt{Success(settings)}
+(o \texttt{Error}): la UI si aggiorna per recomposition in modo interamente reattivo.
+
+\section{Test unitari del layer di dominio}
+
+\paragraph{Problema}
+La correttezza dei calcoli statistici (\texttt{GetStatisticheUseCase}) e della logica
+di valutazione degli obiettivi (\texttt{GoalEvaluator}) non può essere verificata
+solo con test manuali sull'app. È necessario garantire che le trasformazioni sui dati
+producano risultati precisi e che la logica di sblocco degli obiettivi sia corretta
+per tutti i casi limite.
+
+\paragraph{Soluzione}
+Il modulo \texttt{:domain} non ha dipendenze Android: le classi di business logic
+sono pure funzioni Kotlin testabili con JUnit\,4 e \texttt{kotlinx-coroutines-test}
+senza emulatore. Sono stati scritti due suite di test:
+
+\begin{itemize}
+    \item \textbf{GoalEvaluatorTest}: verifica tutti e quattro i \texttt{GoalEvaluator}
+    (PrimoPasso, Secchione, Maratoneta, GiroDiBoa) con liste di esami sintetiche.
+    Nessun mock richiesto — le classi sono funzioni pure.
+    \item \textbf{GetStatisticheUseCaseTest}: verifica il calcolo della media ponderata,
+    dei CFU totali, della base di laurea e dell'andamento progressivo della carriera.
+    Usa un'implementazione fittizia di \texttt{EsameRepository} basata su \texttt{flowOf()},
+    eliminando qualsiasi dipendenza da Room o da Retrofit.
+    \texttt{UnconfinedTestDispatcher} sostituisce \texttt{Dispatchers.Default}
+    per rendere il test deterministico.
+\end{itemize}
+
 % [DA COMPLETARE — sezioni da aggiungere man mano:]
 % - Sicurezza delle credenziali (EncryptedSharedPreferences per il token JWT)
 % - Persistenza ibrida (Room per entità strutturate, DataStore per preferenze)
-% - Sincronizzazione offline-first con WorkManager
-% - Gamification: aggiornamento reattivo di XP e livello
 
 % ── CAPITOLO 4 — PUNTI FORTI E PUNTI DEBOLI ─────────────────
 \chapter{Punti Forti e Punti Deboli}
