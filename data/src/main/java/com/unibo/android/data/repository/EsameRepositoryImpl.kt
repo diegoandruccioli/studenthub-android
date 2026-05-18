@@ -7,7 +7,10 @@ import com.unibo.android.data.local.mapper.toDomain
 import com.unibo.android.data.local.mapper.toEntity
 import com.unibo.android.data.remote.NetworkClient
 import com.unibo.android.data.remote.dto.ExamRequest
+import com.unibo.android.data.remote.dto.StatsResponseDto
 import com.unibo.android.domain.model.Esame
+import com.unibo.android.domain.model.PuntoAndamento
+import com.unibo.android.domain.model.Statistiche
 import com.unibo.android.domain.repository.EsameRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -105,5 +108,31 @@ class EsameRepositoryImpl(context: Context) : EsameRepository {
             }
         }
         Unit
+    }
+
+    override suspend fun getStatisticheRemote(): Result<Statistiche> = withContext(Dispatchers.IO) {
+        runCatching {
+            val response = api.getStatistiche()
+            if (response.isSuccessful && response.body() != null) {
+                val dto = response.body()!!
+
+                val andamento = dto.chartData.data.mapIndexed { index, voto ->
+                    PuntoAndamento(
+                        data = LocalDate.now(), // Mapping semplificato come da istruzioni
+                        voto = voto,
+                        mediaPonderataProgressiva = 0.0
+                    )
+                }
+
+                Statistiche(
+                    mediaPonderata = dto.mediaPonderata,
+                    cfuSostenuti = dto.totaleCfu,
+                    baseLaurea = dto.baseLaurea,
+                    andamentoCarriera = andamento
+                )
+            } else {
+                throw Exception("Errore nel recupero delle statistiche")
+            }
+        }
     }
 }
