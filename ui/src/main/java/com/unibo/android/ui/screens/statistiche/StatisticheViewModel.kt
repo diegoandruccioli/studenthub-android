@@ -5,11 +5,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.unibo.android.domain.model.Statistiche
 import com.unibo.android.domain.usecase.GetStatisticheUseCase
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import java.util.Locale
 
 class StatisticheViewModel(
@@ -17,32 +17,29 @@ class StatisticheViewModel(
     private val locale: Locale = Locale.getDefault()
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<StatisticheUiState>(StatisticheUiState.Loading)
-    val uiState: StateFlow<StatisticheUiState> = _uiState.asStateFlow()
-
-    init {
-        loadStatistiche()
-    }
-
-    private fun loadStatistiche() {
-        viewModelScope.launch {
-            getStatisticheUseCase()
-                .catch { e ->
-                    _uiState.value = StatisticheUiState.Error(e.message ?: "Errore di sistema")
-                }
-                .collect { result ->
-                    result.onSuccess { stats ->
-                        _uiState.value = if (stats.cfuSostenuti == 0) {
-                            StatisticheUiState.Empty
-                        } else {
-                            StatisticheUiState.Success(toUiModel(stats))
-                        }
-                    }.onFailure { error ->
-                        _uiState.value = StatisticheUiState.Error(error.message ?: "Errore integrità dati")
+    val uiState: StateFlow<StatisticheUiState> = getStatisticheUseCase()
+        .map { result ->
+            result.fold(
+                onSuccess = { stats ->
+                    if (stats.cfuSostenuti == 0) {
+                        StatisticheUiState.Empty
+                    } else {
+                        StatisticheUiState.Success(toUiModel(stats))
                     }
+                },
+                onFailure = { error ->
+                    StatisticheUiState.Error(error.message ?: "Errore integrità dati")
                 }
+            )
         }
-    }
+        .catch { e ->
+            emit(StatisticheUiState.Error(e.message ?: "Errore di sistema"))
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = StatisticheUiState.Loading
+        )
 
     private fun toUiModel(stats: Statistiche): StatisticheUiModel {
         val minVoto = 18f

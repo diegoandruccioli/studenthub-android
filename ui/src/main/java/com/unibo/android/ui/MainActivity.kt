@@ -118,8 +118,7 @@ fun StudentHubApp() {
     val statisticheViewModel: StatisticheViewModel = viewModel(
         factory = StatisticheViewModel.provideFactory(
             getStatisticheUseCase = GetStatisticheUseCase(
-                repository = esameRepository,
-                defaultDispatcher = Dispatchers.Default
+                repository = esameRepository
             ),
             locale = Locale.getDefault()
         )
