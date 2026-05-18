@@ -1,10 +1,11 @@
 package com.unibo.android.ui.screens.libretto
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.unibo.android.domain.di.RepositoryProvider
 import com.unibo.android.domain.model.Esame
+import com.unibo.android.domain.repository.EsameRepository
+import com.unibo.android.domain.repository.ObiettivoRepository
 import com.unibo.android.domain.usecase.AddEsameUseCase
 import com.unibo.android.domain.usecase.CheckObiettiviUseCase
 import com.unibo.android.domain.usecase.DeleteEsameUseCase
@@ -22,16 +23,14 @@ import kotlinx.coroutines.launch
 enum class SortBy { DATA, VOTO, CFU }
 enum class SortOrder { ASC, DESC }
 
-class LibrettoViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val repository = (application as RepositoryProvider).getEsameRepository()
-    private val obiettivoRepository = (application as RepositoryProvider).getObiettivoRepository()
-    private val getEsamiUseCase = GetEsamiUseCase(repository)
-    private val addEsameUseCase = AddEsameUseCase(repository)
-    private val updateEsameUseCase = UpdateEsameUseCase(repository)
-    private val deleteEsameUseCase = DeleteEsameUseCase(repository)
-    private val checkObiettiviUseCase = CheckObiettiviUseCase(repository, obiettivoRepository)
-    private val refreshEsamiUseCase = RefreshEsamiUseCase(repository)
+class LibrettoViewModel(
+    private val getEsamiUseCase: GetEsamiUseCase,
+    private val addEsameUseCase: AddEsameUseCase,
+    private val updateEsameUseCase: UpdateEsameUseCase,
+    private val deleteEsameUseCase: DeleteEsameUseCase,
+    private val checkObiettiviUseCase: CheckObiettiviUseCase,
+    private val refreshEsamiUseCase: RefreshEsamiUseCase
+) : ViewModel() {
 
     private val _sortBy = MutableStateFlow(SortBy.DATA)
     val sortBy: StateFlow<SortBy> = _sortBy.asStateFlow()
@@ -77,6 +76,23 @@ class LibrettoViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             deleteEsameUseCase(esame)
             checkObiettiviUseCase()
+        }
+    }
+
+    companion object {
+        fun provideFactory(
+            esameRepository: EsameRepository,
+            obiettivoRepository: ObiettivoRepository
+        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = LibrettoViewModel(
+                getEsamiUseCase = GetEsamiUseCase(esameRepository),
+                addEsameUseCase = AddEsameUseCase(esameRepository),
+                updateEsameUseCase = UpdateEsameUseCase(esameRepository),
+                deleteEsameUseCase = DeleteEsameUseCase(esameRepository),
+                checkObiettiviUseCase = CheckObiettiviUseCase(esameRepository, obiettivoRepository),
+                refreshEsamiUseCase = RefreshEsamiUseCase(esameRepository)
+            ) as T
         }
     }
 }

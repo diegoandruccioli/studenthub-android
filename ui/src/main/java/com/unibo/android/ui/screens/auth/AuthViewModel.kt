@@ -1,10 +1,11 @@
 package com.unibo.android.ui.screens.auth
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.unibo.android.domain.di.RepositoryProvider
+import com.unibo.android.domain.repository.AuthRepository
 import com.unibo.android.domain.usecase.LoginUseCase
+import com.unibo.android.domain.usecase.LogoutUseCase
 import com.unibo.android.domain.usecase.RegisterUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -14,14 +15,17 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class AuthViewModel(application: Application) : AndroidViewModel(application) {
+class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
 
-    private val repository = (application as RepositoryProvider).getAuthRepository()
     private val loginUseCase = LoginUseCase(repository)
     private val registerUseCase = RegisterUseCase(repository)
+    private val logoutUseCase = LogoutUseCase(repository)
 
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
+
+    private val _isLoggingOut = MutableStateFlow(false)
+    val isLoggingOut: StateFlow<Boolean> = _isLoggingOut.asStateFlow()
 
     val sessionState: StateFlow<Boolean?> = repository.isLoggedIn()
         .map { it as Boolean? }
@@ -51,7 +55,24 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun logout() {
+        viewModelScope.launch {
+            _isLoggingOut.value = true
+            logoutUseCase()
+            _isLoggingOut.value = false
+        }
+    }
+
     fun resetState() {
         _uiState.value = AuthUiState.Idle
+    }
+
+    companion object {
+        fun provideFactory(authRepository: AuthRepository): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                    AuthViewModel(authRepository) as T
+            }
     }
 }

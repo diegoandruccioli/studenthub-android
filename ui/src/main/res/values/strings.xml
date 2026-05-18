@@ -75,4 +75,21 @@
     <!-- Validazione -->
     <string name="errore_email_formato">Inserisci un indirizzo email valido</string>
     <string name="errore_password_corta">La password deve contenere almeno 8 caratteri</string>
+
+    <!-- Profilo / Impostazioni -->
+    <string name="profilo_breadcrumb">Home &gt; Profilo</string>
+    <string name="profilo_title">Profilo</string>
+    <string name="profilo_subtitle">Personalizza la tua esperienza</string>
+    <string name="profilo_impostazioni_titolo">Impostazioni</string>
+    <string name="profilo_tema_voti_label">Tema colori voti</string>
+    <string name="profilo_tema_standard">Standard</string>
+    <string name="profilo_tema_lode">Lode in evidenza</string>
+    <string name="profilo_tema_rgb">Gradiente RGB</string>
+    <string name="profilo_soglia_bassa">Soglia bassa (18–30)</string>
+    <string name="profilo_soglia_alta">Soglia alta (18–30)</string>
+    <string name="profilo_salva">Salva impostazioni</string>
+    <string name="profilo_salvato">Impostazioni salvate</string>
+    <string name="profilo_account_titolo">Account</string>
+    <string name="profilo_logout">Esci dall\'account</string>
+    <string name="profilo_errore_soglie">La soglia alta deve essere maggiore di quella bassa</string>
 </resources>
