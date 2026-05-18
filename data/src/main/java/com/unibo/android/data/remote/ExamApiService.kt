@@ -3,6 +3,7 @@ package com.unibo.android.data.remote
 import com.unibo.android.data.remote.dto.AddExamResponse
 import com.unibo.android.data.remote.dto.ExamDto
 import com.unibo.android.data.remote.dto.ExamRequest
+import com.unibo.android.data.remote.dto.StatsResponseDto
 import com.unibo.android.data.remote.dto.UpdateExamResponse
 import retrofit2.Response
 import retrofit2.http.Body
@@ -24,4 +25,7 @@ interface ExamApiService {
 
     @DELETE("exams/{id}")
     suspend fun deleteEsame(@Path("id") id: Int): Response<Unit>
+
+    @GET("stats")
+    suspend fun getStatistiche(): Response<StatsResponseDto>
 }
