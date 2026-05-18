@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.unibo.android.corsolp2526"
+    namespace = "com.unibo.android.studenthub"
     compileSdk = 36
 
     buildFeatures {
@@ -11,7 +11,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.unibo.android.corsolp2526"
+        applicationId = "com.unibo.android.studenthub"
         minSdk = 31
         targetSdk = 36
         versionCode = 1

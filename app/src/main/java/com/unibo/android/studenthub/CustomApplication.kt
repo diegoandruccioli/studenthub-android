@@ -1,4 +1,4 @@
-package com.unibo.android.corsolp2526
+package com.unibo.android.studenthub
 
 import android.app.Application
 import androidx.work.Constraints
