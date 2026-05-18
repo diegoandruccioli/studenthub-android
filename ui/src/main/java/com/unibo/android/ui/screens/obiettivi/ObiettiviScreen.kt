@@ -1,5 +1,6 @@
 package com.unibo.android.ui.screens.obiettivi
 
+import android.app.Activity
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -22,6 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -29,9 +31,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,6 +45,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.unibo.android.domain.model.Obiettivo
@@ -51,6 +58,7 @@ fun ObiettiviScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var showRationaleDialog by remember { mutableStateOf(false) }
 
     // Launcher per la richiesta del permesso notifiche (Android 13+)
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -64,15 +72,47 @@ fun ObiettiviScreen(
     LaunchedEffect(Unit) {
         // Richiedi il permesso solo se siamo su Android 13+ (API 33)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val hasPermission = ContextCompat.checkSelfPermission(
+            val permissionStatus = ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
+            )
 
-            if (!hasPermission) {
-                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            if (permissionStatus != PackageManager.PERMISSION_GRANTED) {
+                // Controllo se dobbiamo mostrare la Rationale (spiegazione)
+                if (ActivityCompat.shouldShowRequestPermissionRationale(
+                        context as Activity,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    )
+                ) {
+                    showRationaleDialog = true
+                } else {
+                    // Richiesta diretta
+                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
             }
         }
+    }
+
+    // Dialog esplicativo per il permesso (Rationale)
+    if (showRationaleDialog) {
+        AlertDialog(
+            onDismissRequest = { showRationaleDialog = false },
+            title = { Text("Permesso notifiche") },
+            text = { Text("Per ricevere aggiornamenti sul tuo rank in classifica e nuovi obiettivi sbloccati, abbiamo bisogno di poterti inviare notifiche.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRationaleDialog = false
+                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }) {
+                    Text("Ho capito, chiedi permesso")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRationaleDialog = false }) {
+                    Text("No, grazie")
+                }
+            }
+        )
     }
 
     ObiettiviScreenContent(
