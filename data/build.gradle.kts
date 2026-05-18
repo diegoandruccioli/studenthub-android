@@ -46,6 +46,9 @@ dependencies {
     // DataStore
     implementation(libs.datastore.preferences)
 
+    // Background work
+    implementation(libs.workmanager.ktx)
+
     // Network
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)
