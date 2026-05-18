@@ -23,6 +23,9 @@ interface EsameDao {
     @Query("SELECT * FROM esami WHERE remote_id = :remoteId LIMIT 1")
     suspend fun getByRemoteId(remoteId: Int): EsameEntity?
 
+    @Query("SELECT * FROM esami WHERE pending_sync = 1")
+    suspend fun getUnsyncedEsami(): List<EsameEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEsame(esame: EsameEntity): Long
 

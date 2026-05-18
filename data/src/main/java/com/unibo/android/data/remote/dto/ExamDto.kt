@@ -22,3 +22,9 @@ data class AddExamResponse(
     val totalXp: Int?,
     val newBadges: List<Any>?
 )
+
+data class UpdateExamResponse(
+    val newBadges: List<Any>?,
+    val revokedBadgeIds: List<Any>?,
+    val xpDifference: Int?
+)

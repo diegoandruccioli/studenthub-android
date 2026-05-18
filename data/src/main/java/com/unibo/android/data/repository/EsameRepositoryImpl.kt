@@ -48,8 +48,32 @@ class EsameRepositoryImpl(context: Context) : EsameRepository {
         Unit
     }
 
-    override suspend fun updateEsame(esame: Esame) =
-        withContext(Dispatchers.IO) { dao.updateEsame(esame.toEntity()) }
+    override suspend fun updateEsame(esame: Esame) = withContext(Dispatchers.IO) {
+        val existing = dao.getById(esame.id)
+        // pendingSync = true sempre: il SyncWorker lo riprende se l'API call fallisce
+        dao.updateEsame(
+            esame.toEntity().copy(
+                remoteId = existing?.remoteId,
+                pendingSync = true
+            )
+        )
+        if (existing?.remoteId != null) {
+            runCatching {
+                val response = api.updateEsame(
+                    existing.remoteId,
+                    ExamRequest(
+                        nome = esame.nome,
+                        voto = esame.voto,
+                        cfu = esame.cfu,
+                        lode = esame.lode,
+                        data = esame.dataEsame.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                    )
+                )
+                if (response.isSuccessful) dao.markSynced(esame.id, existing.remoteId)
+            }
+        }
+        Unit
+    }
 
     override suspend fun deleteEsame(esame: Esame) = withContext(Dispatchers.IO) {
         val entity = dao.getById(esame.id)

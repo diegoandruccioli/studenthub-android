@@ -17,3 +17,5 @@ data class ErrorResponse(
     val error: String?,
     val message: String?
 )
+
+data class RefreshTokenResponse(val success: Boolean)

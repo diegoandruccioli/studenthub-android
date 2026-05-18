@@ -2,6 +2,7 @@ package com.unibo.android.data.remote
 
 import com.unibo.android.data.remote.dto.AuthResponse
 import com.unibo.android.data.remote.dto.LoginRequest
+import com.unibo.android.data.remote.dto.RefreshTokenResponse
 import com.unibo.android.data.remote.dto.RegisterRequest
 import retrofit2.Response
 import retrofit2.http.Body
@@ -16,4 +17,7 @@ interface AuthApiService {
 
     @POST("auth/logout")
     suspend fun logout(): Response<Unit>
+
+    @POST("auth/refresh")
+    suspend fun refreshToken(): Response<RefreshTokenResponse>
 }
