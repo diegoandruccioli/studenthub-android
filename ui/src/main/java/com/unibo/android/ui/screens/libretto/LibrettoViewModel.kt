@@ -49,7 +49,7 @@ class LibrettoViewModel(
             SortBy.CFU -> lista.sortedBy { it.cfu }
         }
         if (order == SortOrder.DESC) sorted.reversed() else sorted
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     init {
         viewModelScope.launch { refreshEsamiUseCase() }
@@ -69,7 +69,10 @@ class LibrettoViewModel(
     }
 
     fun updateEsame(esame: Esame) {
-        viewModelScope.launch { updateEsameUseCase(esame) }
+        viewModelScope.launch {
+            updateEsameUseCase(esame)
+            checkObiettiviUseCase()
+        }
     }
 
     fun deleteEsame(esame: Esame) {
