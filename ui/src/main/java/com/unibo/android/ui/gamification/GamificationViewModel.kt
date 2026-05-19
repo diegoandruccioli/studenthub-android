@@ -24,16 +24,32 @@ class GamificationViewModel(
         viewModelScope.launch {
             _uiState.value = GamificationUiState.Loading
             
+            // Carica statistiche e leaderboard in parallelo
             val statsResult = useCase.getUserStats()
             val leaderboardResult = useCase.getLeaderboard()
 
+            // Verifica se entrambe le operazioni sono riuscite
             if (statsResult.isSuccess && leaderboardResult.isSuccess) {
-                _uiState.value = GamificationUiState.Success(
-                    userStats = statsResult.getOrNull()!!,
-                    leaderboard = leaderboardResult.getOrNull()!!
-                )
+                val userStats = statsResult.getOrNull()
+                val leaderboard = leaderboardResult.getOrNull()
+                
+                if (userStats != null && leaderboard != null) {
+                    _uiState.value = GamificationUiState.Success(
+                        userStats = userStats,
+                        leaderboard = leaderboard
+                    )
+                } else {
+                    _uiState.value = GamificationUiState.Error(
+                        "Dati incompleti: statistiche o leaderboard vuoti"
+                    )
+                }
             } else {
-                _uiState.value = GamificationUiState.Error("Errore nel caricamento dei dati di gamification")
+                // Raccogli il messaggio di errore dal risultato fallito
+                val errorMessage = statsResult.exceptionOrNull()?.message 
+                    ?: leaderboardResult.exceptionOrNull()?.message 
+                    ?: "Errore sconosciuto nel caricamento dei dati di gamification"
+                    
+                _uiState.value = GamificationUiState.Error(errorMessage)
             }
         }
     }
