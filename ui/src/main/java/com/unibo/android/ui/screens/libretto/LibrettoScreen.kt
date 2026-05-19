@@ -42,9 +42,14 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
+import com.unibo.android.ui.gamification.GamificationViewModel
+import com.unibo.android.ui.gamification.GamificationUiState
+import com.unibo.android.ui.components.XPBar
+
 @Composable
 fun LibrettoScreen(
     viewModel: LibrettoViewModel,
+    gamificationViewModel: GamificationViewModel,
     modifier: Modifier = Modifier
 ) {
     val esami by viewModel.esami.collectAsStateWithLifecycle()
@@ -57,6 +62,17 @@ fun LibrettoScreen(
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
+            // Gamification XP Bar
+            val gamificationState by gamificationViewModel.uiState.collectAsStateWithLifecycle()
+            if (gamificationState is GamificationUiState.Success) {
+                val stats = (gamificationState as GamificationUiState.Success).userStats
+                XPBar(
+                    xp = stats.xp,
+                    level = stats.level,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+
             // Filtri sort
             Row(
                 modifier = Modifier
