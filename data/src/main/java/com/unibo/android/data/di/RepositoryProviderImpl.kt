@@ -18,7 +18,7 @@ class RepositoryProviderImpl(private val context: Context) : RepositoryProvider 
     private val esameRepo: EsameRepository by lazy { EsameRepositoryImpl(context) }
     private val obiettivoRepo: ObiettivoRepository by lazy { ObiettivoRepositoryImpl(db.obiettiviDao()) }
     private val authRepo: AuthRepository by lazy { AuthRepositoryImpl(context) }
-    private val settingsRepo: SettingsRepository by lazy { SettingsRepositoryImpl() }
+    private val settingsRepo: SettingsRepository by lazy { SettingsRepositoryImpl(context) }
 
     override fun getEsameRepository(): EsameRepository = esameRepo
     override fun getObiettivoRepository(): ObiettivoRepository = obiettivoRepo
