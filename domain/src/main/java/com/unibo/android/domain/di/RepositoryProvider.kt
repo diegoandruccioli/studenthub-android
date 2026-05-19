@@ -10,4 +10,5 @@ interface RepositoryProvider {
     fun getObiettivoRepository(): ObiettivoRepository
     fun getAuthRepository(): AuthRepository
     fun getSettingsRepository(): SettingsRepository
+    fun getGamificationRepository(): com.unibo.android.domain.repository.GamificationRepository
 }

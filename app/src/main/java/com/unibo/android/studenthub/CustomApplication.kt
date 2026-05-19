@@ -55,4 +55,7 @@ class CustomApplication : Application(), RepositoryProvider {
 
     override fun getSettingsRepository(): SettingsRepository =
         repositoryProviderImpl.getSettingsRepository()
+
+    override fun getGamificationRepository(): com.unibo.android.domain.repository.GamificationRepository =
+        repositoryProviderImpl.getGamificationRepository()
 }

@@ -20,8 +20,16 @@ class RepositoryProviderImpl(private val context: Context) : RepositoryProvider 
     private val authRepo: AuthRepository by lazy { AuthRepositoryImpl(context) }
     private val settingsRepo: SettingsRepository by lazy { SettingsRepositoryImpl(context) }
 
+    private val gamificationRepo: com.unibo.android.domain.repository.GamificationRepository by lazy {
+        com.unibo.android.data.repository.GamificationRepositoryImpl(
+            apiService = null, // In un'app vera questo verrebbe iniettato, qui usiamo mock/null per simularlo
+            rankDataStore = com.unibo.android.data.local.RankDataStore(context)
+        )
+    }
+
     override fun getEsameRepository(): EsameRepository = esameRepo
     override fun getObiettivoRepository(): ObiettivoRepository = obiettivoRepo
     override fun getAuthRepository(): AuthRepository = authRepo
     override fun getSettingsRepository(): SettingsRepository = settingsRepo
+    override fun getGamificationRepository(): com.unibo.android.domain.repository.GamificationRepository = gamificationRepo
 }

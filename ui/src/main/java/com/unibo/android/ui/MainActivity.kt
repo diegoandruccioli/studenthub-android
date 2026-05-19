@@ -45,6 +45,8 @@ import com.unibo.android.ui.screens.libretto.LibrettoScreen
 import com.unibo.android.ui.screens.libretto.LibrettoViewModel
 import com.unibo.android.ui.screens.obiettivi.ObiettiviScreen
 import com.unibo.android.ui.screens.obiettivi.ObiettiviViewModel
+import com.unibo.android.ui.gamification.GamificationViewModel
+import com.unibo.android.domain.usecase.GetGamificationDataUseCase
 import com.unibo.android.ui.screens.profilo.ProfiloScreen
 import com.unibo.android.ui.screens.profilo.ProfiloViewModel
 import com.unibo.android.ui.screens.statistiche.StatisticheScreen
@@ -140,6 +142,13 @@ fun StudentHubApp() {
         )
     )
 
+    val gamificationRepository = repositoryProvider.getGamificationRepository()
+    val gamificationViewModel: GamificationViewModel = viewModel(
+        factory = GamificationViewModel.provideFactory(
+            useCase = GetGamificationDataUseCase(gamificationRepository)
+        )
+    )
+
     NavigationSuiteScaffold(
         navigationSuiteItems = {
             AppDestinations.entries.forEach { destination ->
@@ -156,6 +165,7 @@ fun StudentHubApp() {
             when (currentDestination) {
                 AppDestinations.LIBRETTO -> LibrettoScreen(
                     viewModel = librettoViewModel,
+                    gamificationViewModel = gamificationViewModel,
                     modifier = Modifier.padding(innerPadding)
                 )
                 AppDestinations.STATISTICHE -> StatisticheScreen(
@@ -164,6 +174,7 @@ fun StudentHubApp() {
                 )
                 AppDestinations.OBIETTIVI -> ObiettiviScreen(
                     viewModel = obiettiviViewModel,
+                    gamificationViewModel = gamificationViewModel,
                     modifier = Modifier.padding(innerPadding)
                 )
                 AppDestinations.PROFILO -> ProfiloScreen(
