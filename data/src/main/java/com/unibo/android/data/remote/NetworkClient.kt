@@ -57,6 +57,7 @@ object NetworkClient {
     val authApiService: AuthApiService by lazy { retrofit.create(AuthApiService::class.java) }
     val examApiService: ExamApiService by lazy { retrofit.create(ExamApiService::class.java) }
     val settingsApiService: SettingsApiService by lazy { retrofit.create(SettingsApiService::class.java) }
+    val gamificationApiService: GamificationApiService by lazy { retrofit.create(GamificationApiService::class.java) }
 }
 
 private class TokenAuthenticator(
