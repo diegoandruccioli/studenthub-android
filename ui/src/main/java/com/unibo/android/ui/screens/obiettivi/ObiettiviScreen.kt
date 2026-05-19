@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -51,9 +52,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.unibo.android.domain.model.Obiettivo
 import com.unibo.android.ui.R
 
+import com.unibo.android.ui.gamification.GamificationViewModel
+import com.unibo.android.ui.gamification.GamificationUiState
+import com.unibo.android.ui.components.LeaderboardList
+
 @Composable
 fun ObiettiviScreen(
     viewModel: ObiettiviViewModel,
+    gamificationViewModel: GamificationViewModel,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -112,6 +118,7 @@ fun ObiettiviScreen(
 
     ObiettiviScreenContent(
         uiState = uiState,
+        gamificationState = gamificationViewModel.uiState.collectAsStateWithLifecycle().value,
         modifier = modifier
     )
 }
@@ -119,6 +126,7 @@ fun ObiettiviScreen(
 @Composable
 fun ObiettiviScreenContent(
     uiState: ObiettiviUiState,
+    gamificationState: GamificationUiState,
     modifier: Modifier = Modifier
 ) {
     val blueColor = Color(0xFF1A5A96)
@@ -147,6 +155,19 @@ fun ObiettiviScreenContent(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
+        }
+
+        if (gamificationState is GamificationUiState.Success) {
+            Text(
+                text = "Classifica Studenti",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            LeaderboardList(
+                entries = gamificationState.leaderboard,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
         }
 
         when (val state = uiState) {
