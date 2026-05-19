@@ -1,74 +1,86 @@
 package com.unibo.android.data.repository
 
 import com.unibo.android.data.local.RankDataStore
-import com.unibo.android.data.remote.LeaderboardApiService
+import com.unibo.android.data.local.SessionDataStore
+import com.unibo.android.data.remote.GamificationApiService
 import com.unibo.android.domain.model.LeaderboardEntry
 import com.unibo.android.domain.model.UserStats
 import com.unibo.android.domain.repository.GamificationRepository
 import com.unibo.android.domain.utils.GamificationUtils
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
 class GamificationRepositoryImpl(
-    private val apiService: LeaderboardApiService?,
-    private val rankDataStore: RankDataStore
+    private val apiService: GamificationApiService,
+    private val rankDataStore: RankDataStore,
+    private val sessionDataStore: SessionDataStore,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : GamificationRepository {
 
-    // Simuliamo l'ID dell'utente corrente (es. Rei, basandoci sul mockup)
-    private val currentUserId = 4
-
-    override suspend fun getLeaderboard(): Result<List<LeaderboardEntry>> = withContext(Dispatchers.IO) {
-        try {
-            // Proviamo a chiamare l'API vera
-            val dtos = apiService?.getLeaderboard() ?: throw Exception("ApiService is null")
-            val entries = dtos.map { dto ->
-                LeaderboardEntry(
-                    rank = dto.rank,
-                    userId = dto.userId,
-                    nome = dto.nome,
-                    cognome = dto.cognome,
-                    xp = dto.xp,
-                    isCurrentUser = dto.userId == currentUserId
-                )
+    override suspend fun getLeaderboard(): Result<List<LeaderboardEntry>> = withContext(ioDispatcher) {
+        runCatching {
+            // Ottieni l'ID dell'utente loggato dal DataStore
+            val currentUserId = getCurrentUserIdFromDataStore()
+            
+            val response = apiService.getLeaderboard()
+            if (response.isSuccessful) {
+                val body = response.body() ?: throw Exception("Empty body")
+                body.leaderboard.mapIndexed { index, dto ->
+                    LeaderboardEntry(
+                        rank = index + 1,
+                        userId = dto.id,
+                        nome = dto.nome,
+                        cognome = "",  // Il cognome non è ritornato dall'API nel DTO, usare fallback
+                        xp = dto.xpTotali,
+                        isCurrentUser = dto.id == currentUserId
+                    )
+                }
+            } else {
+                throw Exception("Error fetching leaderboard: ${response.code()}")
             }
-            Result.success(entries)
-        } catch (e: Exception) {
-            // Fallback: mock data per UI testing se l'API fallisce
-            val mockData = listOf(
-                LeaderboardEntry(1, 1, "Diego", "", 2682, false),
-                LeaderboardEntry(2, 2, "Giovanni", "", 2362, false),
-                LeaderboardEntry(3, 3, "Rei", "", 1796, false),
-                LeaderboardEntry(4, currentUserId, "Rei", "", 330, true)
-            )
-            Result.success(mockData)
         }
     }
 
-    override suspend fun getUserStats(): Result<UserStats> = withContext(Dispatchers.IO) {
-        try {
-            val leaderboardResult = getLeaderboard()
-            if (leaderboardResult.isSuccess) {
-                val list = leaderboardResult.getOrNull() ?: emptyList()
-                val currentUserEntry = list.find { it.userId == currentUserId }
+    override suspend fun getUserStats(): Result<UserStats> = withContext(ioDispatcher) {
+        runCatching {
+            val response = apiService.getMyStatus()
+            if (response.isSuccessful) {
+                val body = response.body() ?: throw Exception("Empty body")
                 
-                if (currentUserEntry != null) {
-                    val stats = UserStats(
-                        userId = currentUserEntry.userId,
-                        nome = currentUserEntry.nome,
-                        cognome = currentUserEntry.cognome,
-                        xp = currentUserEntry.xp,
-                        level = GamificationUtils.calculateLevel(currentUserEntry.xp),
-                        rank = currentUserEntry.rank
-                    )
-                    // Salvataggio nel DataStore per uso offline/worker
-                    rankDataStore.saveRankAndXp(stats.rank, stats.xp)
-                    return@withContext Result.success(stats)
-                }
+                // Calcola il level se non è ritornato dall'API
+                val level = body.level ?: GamificationUtils.calculateLevel(body.xp)
+                
+                val stats = UserStats(
+                    userId = body.userId,
+                    nome = "",  // Il nome non è ritornato dall'API, recuperarlo altrove se necessario
+                    cognome = "",
+                    xp = body.xp,
+                    level = level,
+                    rank = body.rank
+                )
+                
+                // Salva rank, XP e userId nel DataStore locale
+                rankDataStore.saveRankAndXp(stats.rank, stats.xp)
+                sessionDataStore.setUserId(stats.userId)  // Salva l'ID utente per getLeaderboard()
+                
+                stats
+            } else {
+                throw Exception("Error fetching stats: ${response.code()}")
             }
-            // Fallback utente non trovato
-            Result.success(UserStats(currentUserId, "Rei", "", 330, GamificationUtils.calculateLevel(330), 4))
-        } catch (e: Exception) {
-            Result.failure(e)
         }
+    }
+
+    /** da SessionDataStore.
+     * Ritorna -1 se l'ID non è disponibile (l'utente non è ancora stato autenticato).
+     */
+    private suspend fun getCurrentUserIdFromDataStore(): Int {
+        return try {
+            sessionDataStore.userId.first()
+        } catch (e: Exception) {
+            -1
+        }
+        return -1  // TODO: Implementare un meccanismo affidabile per ottenere l'ID utente loggato
     }
 }
