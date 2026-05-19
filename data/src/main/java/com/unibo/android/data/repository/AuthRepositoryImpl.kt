@@ -79,6 +79,7 @@ class AuthRepositoryImpl(context: Context) : AuthRepository {
 
     override suspend fun logout(): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching { apiService.logout() }
+        NetworkClient.clearCookies()
         sessionDataStore.setLoggedIn(false)
         Result.success(Unit)
     }

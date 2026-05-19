@@ -24,7 +24,7 @@ class CustomApplication : Application(), RepositoryProvider {
 
     override fun onCreate() {
         super.onCreate()
-        NetworkClient.init(SessionDataStore(this))
+        NetworkClient.init(this, SessionDataStore(this))
         repositoryProviderImpl = RepositoryProviderImpl(this)
         UseCasesProvider.setup(repositoryProviderImpl)
         scheduleSyncWorker()
