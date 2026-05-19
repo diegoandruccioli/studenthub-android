@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.unibo.android.domain.repository.AuthRepository
 import com.unibo.android.domain.usecase.LoginUseCase
-import com.unibo.android.domain.usecase.LogoutUseCase
 import com.unibo.android.domain.usecase.RegisterUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,13 +18,9 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
 
     private val loginUseCase = LoginUseCase(repository)
     private val registerUseCase = RegisterUseCase(repository)
-    private val logoutUseCase = LogoutUseCase(repository)
 
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
-
-    private val _isLoggingOut = MutableStateFlow(false)
-    val isLoggingOut: StateFlow<Boolean> = _isLoggingOut.asStateFlow()
 
     val sessionState: StateFlow<Boolean?> = repository.isLoggedIn()
         .map { it as Boolean? }
@@ -52,14 +47,6 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
             } else {
                 AuthUiState.Error(result.exceptionOrNull()?.message ?: "Errore sconosciuto")
             }
-        }
-    }
-
-    fun logout() {
-        viewModelScope.launch {
-            _isLoggingOut.value = true
-            logoutUseCase()
-            _isLoggingOut.value = false
         }
     }
 
