@@ -35,10 +35,18 @@ class SyncExamsWorker(
             val synced = if (entity.remoteId != null) {
                 runCatching {
                     val response = api.updateEsame(entity.remoteId, request)
-                    if (response.isSuccessful) {
-                        dao.markSynced(entity.id, entity.remoteId)
-                        true
-                    } else false
+                    when {
+                        response.isSuccessful -> {
+                            dao.markSynced(entity.id, entity.remoteId)
+                            true
+                        }
+                        response.code() == 404 -> {
+                            // Esame rimosso dal server: resetta remoteId per ricrearlo al prossimo run
+                            dao.updateEsame(entity.copy(remoteId = null))
+                            true
+                        }
+                        else -> false
+                    }
                 }.getOrDefault(false)
             } else {
                 runCatching {
