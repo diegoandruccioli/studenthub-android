@@ -70,15 +70,12 @@ fun ObiettiviScreen(
     }
 
     LaunchedEffect(Unit) {
-        // Richiedi il permesso solo se siamo su Android 13+ (API 33)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val permissionStatus = ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.POST_NOTIFICATIONS
             )
-
             if (permissionStatus != PackageManager.PERMISSION_GRANTED) {
-                // Controllo se dobbiamo mostrare la Rationale (spiegazione)
                 if (ActivityCompat.shouldShowRequestPermissionRationale(
                         context as Activity,
                         Manifest.permission.POST_NOTIFICATIONS
@@ -86,14 +83,12 @@ fun ObiettiviScreen(
                 ) {
                     showRationaleDialog = true
                 } else {
-                    // Richiesta diretta
                     permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
             }
         }
     }
 
-    // Dialog esplicativo per il permesso (Rationale)
     if (showRationaleDialog) {
         AlertDialog(
             onDismissRequest = { showRationaleDialog = false },
@@ -204,7 +199,7 @@ fun ObiettiviScreenContent(
                             modifier = Modifier.padding(12.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            items(state.obiettivi) { obiettivo ->
+                            items(state.obiettivi, key = { it.id }) { obiettivo ->
                                 ObiettivoItem(obiettivo)
                             }
                         }
