@@ -1,11 +1,12 @@
 package com.unibo.android.data.remote
 
+import android.content.Context
 import com.unibo.android.data.local.SessionDataStore
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import okhttp3.Authenticator
-import okhttp3.Cookie
 import okhttp3.CookieJar
-import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -19,22 +20,19 @@ object NetworkClient {
 
     private const val BASE_URL = "http://10.0.2.2:3010/api/"
 
-    internal val cookieJar: CookieJar = object : CookieJar {
-        private val store = mutableMapOf<String, List<Cookie>>()
-
-        override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
-            store[url.host] = cookies
-        }
-
-        override fun loadForRequest(url: HttpUrl): List<Cookie> =
-            store[url.host] ?: emptyList()
-    }
-
+    private var appContext: Context? = null
     private var sessionDataStore: SessionDataStore? = null
 
-    fun init(sessionDataStore: SessionDataStore) {
+    fun init(context: Context, sessionDataStore: SessionDataStore) {
+        appContext = context.applicationContext
         this.sessionDataStore = sessionDataStore
     }
+
+    internal val cookieJar: PersistentCookieJar by lazy {
+        PersistentCookieJar(appContext ?: error("NetworkClient.init() non chiamato"))
+    }
+
+    fun clearCookies() = cookieJar.clear()
 
     val okHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
@@ -43,7 +41,7 @@ object NetworkClient {
                 HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
             )
             .authenticator(TokenAuthenticator(cookieJar, BASE_URL) {
-                runBlocking { sessionDataStore?.setLoggedIn(false) }
+                CoroutineScope(Dispatchers.IO).launch { sessionDataStore?.setLoggedIn(false) }
             })
             .build()
     }
