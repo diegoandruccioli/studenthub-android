@@ -45,7 +45,7 @@ class ProfiloViewModel(
             val result = updateSettingsUseCase(settings)
             _uiState.value = result.fold(
                 onSuccess = { ProfiloUiState.Success(settings) },
-                onFailure = { ProfiloUiState.Error(it.message ?: "Errore nel salvataggio") }
+                onFailure = { ProfiloUiState.Error(it.message ?: "Errore nel salvataggio", settings) }
             )
         }
     }

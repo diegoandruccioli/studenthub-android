@@ -91,7 +91,7 @@ fun ProfiloScreen(
             }
             is ProfiloUiState.Error -> {
                 ProfiloContent(
-                    settings = Settings("STANDARD", 18, 30),
+                    settings = state.settings ?: Settings("STANDARD", 18, 30),
                     isLoggingOut = isLoggingOut,
                     isSaving = false,
                     onSave = { viewModel.saveSettings(it) },

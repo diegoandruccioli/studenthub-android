@@ -6,5 +6,5 @@ sealed class ProfiloUiState {
     object Loading : ProfiloUiState()
     data class Success(val settings: Settings) : ProfiloUiState()
     data class Saving(val previousSettings: Settings) : ProfiloUiState()
-    data class Error(val message: String) : ProfiloUiState()
+    data class Error(val message: String, val settings: Settings? = null) : ProfiloUiState()
 }
