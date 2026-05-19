@@ -79,9 +79,12 @@ class EsameRepositoryImpl(context: Context) : EsameRepository {
     }
 
     override suspend fun deleteEsame(esame: Esame) = withContext(Dispatchers.IO) {
-        val entity = dao.getById(esame.id)
-        if (entity?.remoteId != null) {
-            runCatching { api.deleteEsame(entity.remoteId) }
+        val entity = dao.getById(esame.id) ?: return@withContext
+        if (entity.remoteId != null) {
+            val deleted = runCatching {
+                api.deleteEsame(entity.remoteId).isSuccessful
+            }.getOrDefault(false)
+            if (!deleted) return@withContext
         }
         dao.deleteEsame(esame.toEntity())
     }
@@ -90,19 +93,33 @@ class EsameRepositoryImpl(context: Context) : EsameRepository {
         runCatching {
             val response = api.getEsami()
             if (response.isSuccessful) {
+                val pendingLocal = dao.getUnsyncedEsami()
                 response.body()?.forEach { dto ->
                     if (dao.getByRemoteId(dto.id) == null) {
-                        dao.insertEsame(
-                            EsameEntity(
-                                nome = dto.nome,
-                                voto = dto.voto,
-                                lode = dto.lode,
-                                cfu = dto.cfu,
-                                dataEsame = LocalDate.parse(dto.data),
-                                remoteId = dto.id,
-                                pendingSync = false
+                        val remoteDate = LocalDate.parse(dto.data)
+                        // Race condition guard: se esiste un esame locale pending con
+                        // stessi nome+voto+data, è lo stesso esame — collega invece di duplicare
+                        val pendingMatch = pendingLocal.firstOrNull { pending ->
+                            pending.remoteId == null &&
+                            pending.nome == dto.nome &&
+                            pending.voto == dto.voto &&
+                            pending.dataEsame == remoteDate
+                        }
+                        if (pendingMatch != null) {
+                            dao.markSynced(pendingMatch.id, dto.id)
+                        } else {
+                            dao.insertEsame(
+                                EsameEntity(
+                                    nome = dto.nome,
+                                    voto = dto.voto,
+                                    lode = dto.lode,
+                                    cfu = dto.cfu,
+                                    dataEsame = remoteDate,
+                                    remoteId = dto.id,
+                                    pendingSync = false
+                                )
                             )
-                        )
+                        }
                     }
                 }
             }
