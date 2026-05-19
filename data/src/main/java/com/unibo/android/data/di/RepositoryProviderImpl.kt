@@ -1,29 +1,36 @@
 package com.unibo.android.data.di
 
 import android.content.Context
+import com.unibo.android.data.local.RankDataStore
+import com.unibo.android.data.local.SessionDataStore
 import com.unibo.android.data.local.StudentHubDatabase
+import com.unibo.android.data.remote.NetworkClient
 import com.unibo.android.data.repository.AuthRepositoryImpl
 import com.unibo.android.data.repository.EsameRepositoryImpl
+import com.unibo.android.data.repository.GamificationRepositoryImpl
 import com.unibo.android.data.repository.ObiettivoRepositoryImpl
 import com.unibo.android.data.repository.SettingsRepositoryImpl
 import com.unibo.android.domain.di.RepositoryProvider
 import com.unibo.android.domain.repository.AuthRepository
 import com.unibo.android.domain.repository.EsameRepository
+import com.unibo.android.domain.repository.GamificationRepository
 import com.unibo.android.domain.repository.ObiettivoRepository
 import com.unibo.android.domain.repository.SettingsRepository
 
 class RepositoryProviderImpl(private val context: Context) : RepositoryProvider {
     private val db: StudentHubDatabase by lazy { StudentHubDatabase.getInstance(context) }
+    private val sessionDataStore: SessionDataStore by lazy { SessionDataStore(context) }
 
     private val esameRepo: EsameRepository by lazy { EsameRepositoryImpl(context) }
     private val obiettivoRepo: ObiettivoRepository by lazy { ObiettivoRepositoryImpl(db.obiettiviDao()) }
     private val authRepo: AuthRepository by lazy { AuthRepositoryImpl(context) }
     private val settingsRepo: SettingsRepository by lazy { SettingsRepositoryImpl(context) }
 
-    private val gamificationRepo: com.unibo.android.domain.repository.GamificationRepository by lazy {
-        com.unibo.android.data.repository.GamificationRepositoryImpl(
-            apiService = null, // In un'app vera questo verrebbe iniettato, qui usiamo mock/null per simularlo
-            rankDataStore = com.unibo.android.data.local.RankDataStore(context)
+    private val gamificationRepo: GamificationRepository by lazy {
+        GamificationRepositoryImpl(
+            apiService = NetworkClient.gamificationApiService,
+            rankDataStore = RankDataStore(context),
+            sessionDataStore = sessionDataStore
         )
     }
 
