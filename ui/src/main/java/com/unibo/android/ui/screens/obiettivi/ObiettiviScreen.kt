@@ -50,13 +50,18 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.unibo.android.domain.model.Obiettivo
 import com.unibo.android.ui.R
+import com.unibo.android.ui.screens.gamification.GamificationUiState
+import com.unibo.android.ui.screens.gamification.GamificationViewModel
+import com.unibo.android.ui.screens.gamification.components.LeaderboardItem
 
 @Composable
 fun ObiettiviScreen(
     viewModel: ObiettiviViewModel,
+    gamificationViewModel: GamificationViewModel,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val gamificationState by gamificationViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showRationaleDialog by remember { mutableStateOf(false) }
 
@@ -112,6 +117,7 @@ fun ObiettiviScreen(
 
     ObiettiviScreenContent(
         uiState = uiState,
+        gamificationState = gamificationState,
         modifier = modifier
     )
 }
@@ -119,6 +125,7 @@ fun ObiettiviScreen(
 @Composable
 fun ObiettiviScreenContent(
     uiState: ObiettiviUiState,
+    gamificationState: GamificationUiState,
     modifier: Modifier = Modifier
 ) {
     val blueColor = Color(0xFF1A5A96)
@@ -202,6 +209,62 @@ fun ObiettiviScreenContent(
                             items(state.obiettivi, key = { it.id }) { obiettivo ->
                                 ObiettivoItem(obiettivo)
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- SEZIONE CLASSIFICA ---
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "Classifica Globale",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                when (val state = gamificationState) {
+                    is GamificationUiState.Loading -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    is GamificationUiState.Success -> {
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            state.leaderboard.forEachIndexed { index, entry ->
+                                LeaderboardItem(
+                                    entry = entry,
+                                    rank = index + 1
+                                )
+                            }
+                        }
+                    }
+                    is GamificationUiState.Error -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Impossibile caricare la classifica",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error
+                            )
                         }
                     }
                 }

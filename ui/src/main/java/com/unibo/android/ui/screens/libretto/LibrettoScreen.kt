@@ -10,7 +10,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -19,10 +23,12 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,6 +44,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.unibo.android.domain.model.Esame
 import com.unibo.android.ui.R
+import com.unibo.android.ui.screens.gamification.GamificationUiState
+import com.unibo.android.ui.screens.gamification.GamificationViewModel
+import com.unibo.android.ui.screens.gamification.components.XpBar
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
@@ -45,11 +54,13 @@ import java.time.format.DateTimeParseException
 @Composable
 fun LibrettoScreen(
     viewModel: LibrettoViewModel,
+    gamificationViewModel: GamificationViewModel,
     modifier: Modifier = Modifier
 ) {
     val esami by viewModel.esami.collectAsStateWithLifecycle()
     val sortBy by viewModel.sortBy.collectAsStateWithLifecycle()
     val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
+    val gamificationState by gamificationViewModel.uiState.collectAsStateWithLifecycle()
 
     var showAddDialog by remember { mutableStateOf(false) }
     var esameToEdit by remember { mutableStateOf<Esame?>(null) }
@@ -57,6 +68,31 @@ fun LibrettoScreen(
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
+            // Sezione Gamification (Barra XP)
+            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                when (val state = gamificationState) {
+                    is GamificationUiState.Loading -> {
+                        LinearProgressIndicator(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(CircleShape)
+                        )
+                    }
+                    is GamificationUiState.Success -> {
+                        XpBar(
+                            level = state.stats.level,
+                            levelTitle = state.stats.levelTitle,
+                            xpLabel = state.stats.xpLabel,
+                            progressPercentage = state.stats.progressPercentage
+                        )
+                    }
+                    is GamificationUiState.Error -> {
+                        // In caso di errore non mostriamo la barra, o potremmo mostrare un placeholder
+                    }
+                }
+            }
+
             // Filtri sort
             Row(
                 modifier = Modifier

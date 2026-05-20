@@ -14,6 +14,7 @@ import com.unibo.android.domain.di.RepositoryProvider
 import com.unibo.android.domain.di.UseCasesProvider
 import com.unibo.android.domain.repository.AuthRepository
 import com.unibo.android.domain.repository.EsameRepository
+import com.unibo.android.domain.repository.GamificationRepository
 import com.unibo.android.domain.repository.ObiettivoRepository
 import com.unibo.android.domain.repository.SettingsRepository
 import java.util.concurrent.TimeUnit
@@ -55,4 +56,7 @@ class CustomApplication : Application(), RepositoryProvider {
 
     override fun getSettingsRepository(): SettingsRepository =
         repositoryProviderImpl.getSettingsRepository()
+
+    override fun getGamificationRepository(): GamificationRepository =
+        repositoryProviderImpl.getGamificationRepository()
 }
