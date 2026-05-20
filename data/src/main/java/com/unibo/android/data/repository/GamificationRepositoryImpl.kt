@@ -30,9 +30,10 @@ class GamificationRepositoryImpl(context: Context) : GamificationRepository {
         rankDataStore.currentLevel,
         rankDataStore.levelTitle,
         rankDataStore.progressPercentage,
+        sessionDataStore.userId,
     ) { params: Array<Any> ->
         UserStats(
-            userId = 0, // Verrà popolato correttamente via GetGamificationDataUseCase
+            userId = params[5] as Int,
             xp = params[0] as Int,
             rank = params[1] as Int,
             level = params[2] as Int,
@@ -77,14 +78,16 @@ class GamificationRepositoryImpl(context: Context) : GamificationRepository {
         try {
             val response = api.getLeaderboard()
             if (response.isSuccessful) {
-                val entriesDto = response.body() ?: emptyList()
+                val responseDto = response.body()
+                val entriesDto = responseDto?.leaderboard ?: emptyList()
+                responseDto?.myRank?.let { rankDataStore.saveMyRank(it) }
                 
                 // Mappatura DTO -> Entity per salvataggio locale (SSOT)
                 val entities = entriesDto.map {
                     LeaderboardEntity(
                         userId = it.userId,
                         nome = it.nome,
-                        cognome = it.cognome,
+                        cognome = it.cognome ?: "",
                         xpTotali = it.xpTotali,
                     )
                 }
@@ -96,7 +99,7 @@ class GamificationRepositoryImpl(context: Context) : GamificationRepository {
                     LeaderboardEntry(
                         userId = it.userId,
                         nome = it.nome,
-                        cognome = it.cognome,
+                        cognome = it.cognome ?: "",
                         xpTotali = it.xpTotali,
                     )
                 }

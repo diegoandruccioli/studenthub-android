@@ -5,8 +5,13 @@ import com.google.gson.annotations.SerializedName
 data class LeaderboardEntryDto(
     @SerializedName("id") val userId: Int,
     val nome: String,
-    val cognome: String,
-    val xpTotali: Int
+    val cognome: String? = "",
+    @SerializedName("xp_totali") val xpTotali: Int
+)
+
+data class LeaderboardResponseDto(
+    val leaderboard: List<LeaderboardEntryDto>,
+    val myRank: Int
 )
 
 data class GamificationStatusDto(

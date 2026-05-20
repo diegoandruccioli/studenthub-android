@@ -37,4 +37,10 @@ class RankDataStore(private val context: Context) {
             prefs[PROGRESS_PERCENTAGE] = dto.progressPercentage / 100f
         }
     }
+
+    suspend fun saveMyRank(rank: Int) {
+        context.rankDataStore.edit { prefs ->
+            prefs[CURRENT_RANK] = rank
+        }
+    }
 }
