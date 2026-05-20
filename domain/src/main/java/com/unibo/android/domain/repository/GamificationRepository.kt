@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface GamificationRepository {
     val userStatsFlow: Flow<UserStats>
+    val leaderboardFlow: Flow<List<LeaderboardEntry>>
     suspend fun getUserStats(): Result<Unit>
     suspend fun getLeaderboard(): Result<List<LeaderboardEntry>>
 }

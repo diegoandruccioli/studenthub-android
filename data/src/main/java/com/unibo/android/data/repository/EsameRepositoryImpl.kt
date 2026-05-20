@@ -152,4 +152,8 @@ class EsameRepositoryImpl(context: Context) : EsameRepository {
             }
         }
     }
+
+    override val totalXpFlow: Flow<Int> = dao.getTotalXp()
+        .map { it ?: 0 }
+        .flowOn(Dispatchers.IO)
 }

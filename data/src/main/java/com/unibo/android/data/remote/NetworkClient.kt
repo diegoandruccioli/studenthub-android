@@ -1,6 +1,7 @@
 package com.unibo.android.data.remote
 
 import android.content.Context
+import android.util.Log
 import com.unibo.android.data.local.SessionDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -57,6 +58,7 @@ object NetworkClient {
     val authApiService: AuthApiService by lazy { retrofit.create(AuthApiService::class.java) }
     val examApiService: ExamApiService by lazy { retrofit.create(ExamApiService::class.java) }
     val settingsApiService: SettingsApiService by lazy { retrofit.create(SettingsApiService::class.java) }
+    val gamificationApiService: GamificationApiService by lazy { retrofit.create(GamificationApiService::class.java) }
 }
 
 private class TokenAuthenticator(
@@ -78,12 +80,16 @@ private class TokenAuthenticator(
             .build()
 
         val refreshResponse = runCatching {
+            Log.d("NetworkClient", "Token scaduto. Tentativo di refresh via cookie...")
             refreshClient.newCall(refreshRequest).execute()
         }.getOrNull()
 
         return if (refreshResponse?.isSuccessful == true) {
+            Log.d("NetworkClient", "Refresh riuscito. Riesecuzione chiamata originale...")
+            // OkHttp re-inietta i cookie aggiornati dal CookieJar nella nuova istanza della request
             response.request
         } else {
+            Log.e("NetworkClient", "Refresh fallito (Sessione scaduta). Logout in corso.")
             onRefreshFailed()
             null
         }

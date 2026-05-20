@@ -37,4 +37,7 @@ interface EsameDao {
 
     @Delete
     suspend fun deleteEsame(esame: EsameEntity)
+
+    @Query("SELECT SUM(voto * cfu + (CASE WHEN lode = 1 THEN 50 ELSE 0 END)) FROM esami")
+    fun getTotalXp(): Flow<Int?>
 }

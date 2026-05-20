@@ -6,7 +6,8 @@ data class UserStats(
     val rank: Int,
     val level: Int,
     val levelTitle: String,
-    val progressPercentage: Float
+    val progressPercentage: Float,
+    val xpLabel: String
 )
 
 data class LeaderboardEntry(

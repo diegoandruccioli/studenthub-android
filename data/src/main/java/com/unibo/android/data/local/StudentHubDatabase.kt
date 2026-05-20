@@ -7,16 +7,19 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.unibo.android.data.local.dao.EsameDao
+import com.unibo.android.data.local.dao.LeaderboardDao
 import com.unibo.android.data.local.dao.ObiettivoDao
 import com.unibo.android.data.local.entity.EsameEntity
+import com.unibo.android.data.local.entity.LeaderboardEntity
 import com.unibo.android.data.local.entity.ObiettivoEntity
 
-@Database(entities = [EsameEntity::class, ObiettivoEntity::class], version = 10)
+@Database(entities = [EsameEntity::class, ObiettivoEntity::class, LeaderboardEntity::class], version = 11)
 @TypeConverters(Converters::class)
 abstract class StudentHubDatabase : RoomDatabase() {
 
     abstract fun esameDao(): EsameDao
     abstract fun obiettiviDao(): ObiettivoDao
+    abstract fun leaderboardDao(): LeaderboardDao
 
     companion object {
         @Volatile private var INSTANCE: StudentHubDatabase? = null

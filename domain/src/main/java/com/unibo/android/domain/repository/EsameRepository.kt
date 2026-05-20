@@ -11,4 +11,5 @@ interface EsameRepository {
     suspend fun deleteEsame(esame: Esame)
     suspend fun refreshEsami()
     suspend fun getStatisticheRemote(): Result<Statistiche>
+    val totalXpFlow: Flow<Int>
 }
