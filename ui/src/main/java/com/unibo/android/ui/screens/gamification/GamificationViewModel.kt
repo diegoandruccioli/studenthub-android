@@ -3,6 +3,7 @@ package com.unibo.android.ui.screens.gamification
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.unibo.android.domain.repository.EsameRepository
 import com.unibo.android.domain.repository.GamificationRepository
 import com.unibo.android.domain.usecase.GetGamificationDataUseCase
 import com.unibo.android.domain.usecase.GetLeaderboardUseCase
@@ -100,12 +101,13 @@ class GamificationViewModel(
     companion object {
         fun provideFactory(
             gamificationRepository: GamificationRepository,
+            esameRepository: EsameRepository
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     return GamificationViewModel(
-                        GetGamificationDataUseCase(gamificationRepository),
+                        GetGamificationDataUseCase(gamificationRepository, esameRepository),
                         GetLeaderboardUseCase(gamificationRepository),
                         RefreshUserStatsUseCase(gamificationRepository),
                         RefreshLeaderboardUseCase(gamificationRepository),

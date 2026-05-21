@@ -114,7 +114,7 @@ fun StudentHubApp() {
     val gamificationRepository = repositoryProvider.getGamificationRepository()
 
     val gamificationViewModel: GamificationViewModel = viewModel(
-        factory = GamificationViewModel.provideFactory(gamificationRepository)
+        factory = GamificationViewModel.provideFactory(gamificationRepository, esameRepository)
     )
 
     val librettoViewModel: LibrettoViewModel = viewModel(
