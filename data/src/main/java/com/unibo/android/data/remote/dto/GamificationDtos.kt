@@ -15,9 +15,18 @@ data class LeaderboardResponseDto(
 )
 
 data class GamificationStatusDto(
-    val currentXp: Int,
-    val currentRank: Int,
-    val currentLevel: Int,
-    val levelTitle: String,
-    val progressPercentage: Int
+    @SerializedName("xp_totali") val xpTotali: Int,
+    @SerializedName("livello") val livello: LivelloDto,
+    @SerializedName("progress") val progress: ProgressDto
+)
+
+data class LivelloDto(
+    @SerializedName("numero") val numero: Int,
+    @SerializedName("nome") val nome: String
+)
+
+data class ProgressDto(
+    @SerializedName("percentuale") val percentuale: Int,
+    @SerializedName("xp_mancanti") val xpMancanti: Int,
+    @SerializedName("prossima_soglia") val prossimaSoglia: Int?
 )

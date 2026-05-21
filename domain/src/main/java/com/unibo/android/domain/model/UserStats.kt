@@ -7,7 +7,8 @@ data class UserStats(
     val level: Int,
     val levelTitle: String,
     val progressPercentage: Float,
-    val xpLabel: String
+    val xpLabel: String,
+    val prossimaSoglia: Int? = null
 )
 
 data class LeaderboardEntry(

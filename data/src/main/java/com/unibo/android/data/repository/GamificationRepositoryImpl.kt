@@ -31,7 +31,8 @@ class GamificationRepositoryImpl(context: Context) : GamificationRepository {
         rankDataStore.levelTitle,
         rankDataStore.progressPercentage,
         sessionDataStore.userId,
-    ) { params: Array<Any> ->
+        rankDataStore.prossimaSoglia,
+    ) { params: Array<Any?> ->
         UserStats(
             userId = params[5] as Int,
             xp = params[0] as Int,
@@ -40,6 +41,7 @@ class GamificationRepositoryImpl(context: Context) : GamificationRepository {
             levelTitle = params[3] as String,
             progressPercentage = params[4] as Float,
             xpLabel = "", // Verrà calcolato via GetGamificationDataUseCase
+            prossimaSoglia = params[6] as Int?
         )
     }
 
