@@ -65,6 +65,10 @@ fun LibrettoScreen(
     var esameToEdit by remember { mutableStateOf<Esame?>(null) }
     var esameToDelete by remember { mutableStateOf<Esame?>(null) }
 
+    LaunchedEffect(Unit) {
+        gamificationViewModel.refreshStats()
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Sezione Gamification (Barra XP)
