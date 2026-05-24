@@ -66,25 +66,31 @@ class LibrettoViewModel(
 
     fun addEsame(esame: Esame) {
         viewModelScope.launch {
-            addEsameUseCase(esame)
-            checkObiettiviUseCase()
-            refreshUserStatsUseCase()
+            val result = addEsameUseCase(esame)
+            if (result.isSuccess) {
+                checkObiettiviUseCase()
+                refreshUserStatsUseCase()
+            }
         }
     }
 
     fun updateEsame(esame: Esame) {
         viewModelScope.launch {
-            updateEsameUseCase(esame)
-            checkObiettiviUseCase()
-            refreshUserStatsUseCase()
+            val result = updateEsameUseCase(esame)
+            if (result.isSuccess) {
+                checkObiettiviUseCase()
+                refreshUserStatsUseCase()
+            }
         }
     }
 
     fun deleteEsame(esame: Esame) {
         viewModelScope.launch {
-            deleteEsameUseCase(esame)
-            checkObiettiviUseCase()
-            refreshUserStatsUseCase()
+            val result = deleteEsameUseCase(esame)
+            if (result.isSuccess) {
+                checkObiettiviUseCase()
+                refreshUserStatsUseCase()
+            }
         }
     }
 

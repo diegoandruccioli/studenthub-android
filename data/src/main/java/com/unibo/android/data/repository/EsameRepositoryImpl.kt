@@ -7,7 +7,6 @@ import com.unibo.android.data.local.mapper.toDomain
 import com.unibo.android.data.local.mapper.toEntity
 import com.unibo.android.data.remote.NetworkClient
 import com.unibo.android.data.remote.dto.ExamRequest
-import com.unibo.android.data.remote.dto.StatsResponseDto
 import com.unibo.android.domain.model.Esame
 import com.unibo.android.domain.model.PuntoAndamento
 import com.unibo.android.domain.model.Statistiche
@@ -30,7 +29,7 @@ class EsameRepositoryImpl(context: Context) : EsameRepository {
             .map { list -> list.map { it.toDomain() } }
             .flowOn(Dispatchers.IO)
 
-    override suspend fun addEsame(esame: Esame) = withContext(Dispatchers.IO) {
+    override suspend fun addEsame(esame: Esame): Result<Unit> = withContext(Dispatchers.IO) {
         val localId = dao.insertEsame(esame.toEntity()).toInt()
         runCatching {
             val response = api.addEsami(
@@ -46,14 +45,15 @@ class EsameRepositoryImpl(context: Context) : EsameRepository {
                 response.body()?.ids?.firstOrNull()?.let { remoteId ->
                     dao.markSynced(localId, remoteId)
                 }
+                Unit
+            } else {
+                throw Exception("Sync failed")
             }
         }
-        Unit
     }
 
-    override suspend fun updateEsame(esame: Esame) = withContext(Dispatchers.IO) {
+    override suspend fun updateEsame(esame: Esame): Result<Unit> = withContext(Dispatchers.IO) {
         val existing = dao.getById(esame.id)
-        // pendingSync = true sempre: il SyncWorker lo riprende se l'API call fallisce
         dao.updateEsame(
             esame.toEntity().copy(
                 remoteId = existing?.remoteId,
@@ -72,59 +72,71 @@ class EsameRepositoryImpl(context: Context) : EsameRepository {
                         data = esame.dataEsame.format(DateTimeFormatter.ISO_LOCAL_DATE)
                     )
                 )
-                if (response.isSuccessful) dao.markSynced(esame.id, existing.remoteId)
+                if (response.isSuccessful) {
+                    dao.markSynced(esame.id, existing.remoteId)
+                    Unit
+                } else {
+                    throw Exception("Sync failed")
+                }
             }
+        } else {
+            Result.success(Unit)
         }
-        Unit
     }
 
-    override suspend fun deleteEsame(esame: Esame) = withContext(Dispatchers.IO) {
-        val entity = dao.getById(esame.id) ?: return@withContext
+    override suspend fun deleteEsame(esame: Esame): Result<Unit> = withContext(Dispatchers.IO) {
+        val entity = dao.getById(esame.id) ?: return@withContext Result.success(Unit)
         if (entity.remoteId != null) {
-            val deleted = runCatching {
-                api.deleteEsame(entity.remoteId).isSuccessful
-            }.getOrDefault(false)
-            if (!deleted) return@withContext
+            runCatching {
+                val response = api.deleteEsame(entity.remoteId)
+                if (response.isSuccessful) {
+                    dao.deleteEsame(esame.toEntity())
+                    Unit
+                } else {
+                    throw Exception("Delete sync failed")
+                }
+            }
+        } else {
+            dao.deleteEsame(esame.toEntity())
+            Result.success(Unit)
         }
-        dao.deleteEsame(esame.toEntity())
     }
 
-    override suspend fun refreshEsami() = withContext(Dispatchers.IO) {
-        runCatching {
-            val response = api.getEsami()
-            if (response.isSuccessful) {
-                val pendingLocal = dao.getUnsyncedEsami()
-                response.body()?.forEach { dto ->
-                    if (dao.getByRemoteId(dto.id) == null) {
-                        val remoteDate = LocalDate.parse(dto.data)
-                        // Race condition guard: se esiste un esame locale pending con
-                        // stessi nome+voto+data, è lo stesso esame — collega invece di duplicare
-                        val pendingMatch = pendingLocal.firstOrNull { pending ->
-                            pending.remoteId == null &&
-                            pending.nome == dto.nome &&
-                            pending.voto == dto.voto &&
-                            pending.dataEsame == remoteDate
-                        }
-                        if (pendingMatch != null) {
-                            dao.markSynced(pendingMatch.id, dto.id)
-                        } else {
-                            dao.insertEsame(
-                                EsameEntity(
-                                    nome = dto.nome,
-                                    voto = dto.voto,
-                                    lode = dto.lode,
-                                    cfu = dto.cfu,
-                                    dataEsame = remoteDate,
-                                    remoteId = dto.id,
-                                    pendingSync = false
+    override suspend fun refreshEsami() {
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val response = api.getEsami()
+                if (response.isSuccessful) {
+                    val pendingLocal = dao.getUnsyncedEsami()
+                    response.body()?.forEach { dto ->
+                        if (dao.getByRemoteId(dto.id) == null) {
+                            val remoteDate = LocalDate.parse(dto.data)
+                            val pendingMatch = pendingLocal.firstOrNull { pending ->
+                                pending.remoteId == null &&
+                                pending.nome == dto.nome &&
+                                pending.voto == dto.voto &&
+                                pending.dataEsame == remoteDate
+                            }
+                            if (pendingMatch != null) {
+                                dao.markSynced(pendingMatch.id, dto.id)
+                            } else {
+                                dao.insertEsame(
+                                    EsameEntity(
+                                        nome = dto.nome,
+                                        voto = dto.voto,
+                                        lode = dto.lode,
+                                        cfu = dto.cfu,
+                                        dataEsame = remoteDate,
+                                        remoteId = dto.id,
+                                        pendingSync = false
+                                    )
                                 )
-                            )
+                            }
                         }
                     }
                 }
             }
         }
-        Unit
     }
 
     override suspend fun getStatisticheRemote(): Result<Statistiche> = withContext(Dispatchers.IO) {
@@ -135,7 +147,7 @@ class EsameRepositoryImpl(context: Context) : EsameRepository {
 
                 val andamento = dto.chartData.data.mapIndexed { index, voto ->
                     PuntoAndamento(
-                        data = LocalDate.now(), // Mapping semplificato come da istruzioni
+                        data = LocalDate.now(),
                         voto = voto,
                         mediaPonderataProgressiva = 0.0
                     )
