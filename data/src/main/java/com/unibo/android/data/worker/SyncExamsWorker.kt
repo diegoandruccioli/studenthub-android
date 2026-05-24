@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.unibo.android.data.local.StudentHubDatabase
+import com.unibo.android.data.repository.GamificationRepositoryImpl
+import com.unibo.android.data.repository.ObiettivoRepositoryImpl
 import com.unibo.android.data.remote.NetworkClient
 import com.unibo.android.data.remote.dto.ExamRequest
 import java.time.format.DateTimeFormatter
@@ -14,7 +16,8 @@ class SyncExamsWorker(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
-        val dao = StudentHubDatabase.getInstance(applicationContext).esameDao()
+        val db = StudentHubDatabase.getInstance(applicationContext)
+        val dao = db.esameDao()
         val api = NetworkClient.examApiService
         val formatter = DateTimeFormatter.ISO_LOCAL_DATE
         val pending = dao.getUnsyncedEsami()
@@ -22,8 +25,10 @@ class SyncExamsWorker(
         if (pending.isEmpty()) return Result.success()
 
         var hasError = false
+        var syncCount = 0
 
         pending.forEach { entity ->
+            // ... (logica di sync esistente)
             val request = ExamRequest(
                 nome = entity.nome,
                 voto = entity.voto,
@@ -41,7 +46,6 @@ class SyncExamsWorker(
                             true
                         }
                         response.code() == 404 -> {
-                            // Esame rimosso dal server: resetta remoteId per ricrearlo al prossimo run
                             dao.updateEsame(entity.copy(remoteId = null))
                             true
                         }
@@ -60,7 +64,16 @@ class SyncExamsWorker(
                 }.getOrDefault(false)
             }
 
-            if (!synced) hasError = true
+            if (synced) syncCount++ else hasError = true
+        }
+
+        // Se abbiamo sincronizzato almeno un esame, forziamo il refresh della gamification
+        if (syncCount > 0) {
+            val gamificationRepo = GamificationRepositoryImpl(applicationContext)
+            val obiettivoRepo = ObiettivoRepositoryImpl(db.obiettiviDao())
+            
+            gamificationRepo.getUserStats()
+            obiettivoRepo.refreshObiettivi()
         }
 
         return if (hasError) Result.retry() else Result.success()

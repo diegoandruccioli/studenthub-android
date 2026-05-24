@@ -119,7 +119,7 @@ fun StudentHubApp() {
     )
 
     val librettoViewModel: LibrettoViewModel = viewModel(
-        factory = LibrettoViewModel.provideFactory(esameRepository, gamificationRepository)
+        factory = LibrettoViewModel.provideFactory(esameRepository, gamificationRepository, obiettivoRepository)
     )
 
     val statisticheViewModel: StatisticheViewModel = viewModel(
