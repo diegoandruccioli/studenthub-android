@@ -1,5 +1,6 @@
 package com.unibo.android.data.remote
 
+import com.unibo.android.data.remote.dto.BadgeDto
 import com.unibo.android.data.remote.dto.GamificationStatusDto
 import com.unibo.android.data.remote.dto.LeaderboardResponseDto
 import retrofit2.Response
@@ -11,4 +12,7 @@ interface GamificationApiService {
 
     @GET("users/leaderboard")
     suspend fun getLeaderboard(): Response<LeaderboardResponseDto>
+
+    @GET("gamification/badges")
+    suspend fun getBadges(): Response<List<BadgeDto>>
 }

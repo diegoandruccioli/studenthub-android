@@ -8,7 +8,6 @@ import com.unibo.android.domain.repository.EsameRepository
 import com.unibo.android.domain.repository.ObiettivoRepository
 import com.unibo.android.domain.repository.GamificationRepository
 import com.unibo.android.domain.usecase.AddEsameUseCase
-import com.unibo.android.domain.usecase.CheckObiettiviUseCase
 import com.unibo.android.domain.usecase.DeleteEsameUseCase
 import com.unibo.android.domain.usecase.GetEsamiUseCase
 import com.unibo.android.domain.usecase.RefreshEsamiUseCase
@@ -30,7 +29,6 @@ class LibrettoViewModel(
     private val addEsameUseCase: AddEsameUseCase,
     private val updateEsameUseCase: UpdateEsameUseCase,
     private val deleteEsameUseCase: DeleteEsameUseCase,
-    private val checkObiettiviUseCase: CheckObiettiviUseCase,
     private val refreshEsamiUseCase: RefreshEsamiUseCase,
     private val refreshUserStatsUseCase: RefreshUserStatsUseCase,
 ) : ViewModel() {
@@ -68,7 +66,6 @@ class LibrettoViewModel(
         viewModelScope.launch {
             val result = addEsameUseCase(esame)
             if (result.isSuccess) {
-                checkObiettiviUseCase()
                 refreshUserStatsUseCase()
             }
         }
@@ -78,7 +75,6 @@ class LibrettoViewModel(
         viewModelScope.launch {
             val result = updateEsameUseCase(esame)
             if (result.isSuccess) {
-                checkObiettiviUseCase()
                 refreshUserStatsUseCase()
             }
         }
@@ -88,7 +84,6 @@ class LibrettoViewModel(
         viewModelScope.launch {
             val result = deleteEsameUseCase(esame)
             if (result.isSuccess) {
-                checkObiettiviUseCase()
                 refreshUserStatsUseCase()
             }
         }
@@ -97,7 +92,6 @@ class LibrettoViewModel(
     companion object {
         fun provideFactory(
             esameRepository: EsameRepository,
-            obiettivoRepository: ObiettivoRepository,
             gamificationRepository: GamificationRepository,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
@@ -106,7 +100,6 @@ class LibrettoViewModel(
                 addEsameUseCase = AddEsameUseCase(esameRepository),
                 updateEsameUseCase = UpdateEsameUseCase(esameRepository),
                 deleteEsameUseCase = DeleteEsameUseCase(esameRepository),
-                checkObiettiviUseCase = CheckObiettiviUseCase(esameRepository, obiettivoRepository),
                 refreshEsamiUseCase = RefreshEsamiUseCase(esameRepository),
                 refreshUserStatsUseCase = RefreshUserStatsUseCase(gamificationRepository)
             ) as T

@@ -13,8 +13,8 @@ interface ObiettivoDao {
     @Query("SELECT * FROM obiettivi")
     fun getAllObiettivi(): Flow<List<ObiettivoEntity>>
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertObiettivi(obiettivi: List<ObiettivoEntity>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(obiettivi: List<ObiettivoEntity>)
 
     @Query("SELECT * FROM obiettivi")
     suspend fun getAllObiettiviSync(): List<ObiettivoEntity>

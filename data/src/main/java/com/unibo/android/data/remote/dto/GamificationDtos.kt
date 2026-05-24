@@ -30,3 +30,11 @@ data class ProgressDto(
     @SerializedName("xp_mancanti") val xpMancanti: Int,
     @SerializedName("prossima_soglia") val prossimaSoglia: Int?
 )
+
+data class BadgeDto(
+    @SerializedName("id") val id: Int,
+    @SerializedName("nome") val nome: String,
+    @SerializedName("descrizione") val descrizione: String,
+    @SerializedName("completato") val completato: Int, // Il backend spesso usa 0/1 per i booleani
+    @SerializedName("premio_xp") val premioXp: Int
+)

@@ -34,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.unibo.android.domain.di.RepositoryProvider
 import com.unibo.android.domain.usecase.GetObiettiviUseCase
+import com.unibo.android.domain.usecase.RefreshObiettiviUseCase
 import com.unibo.android.domain.usecase.GetSettingsUseCase
 import com.unibo.android.domain.usecase.GetStatisticheUseCase
 import com.unibo.android.domain.usecase.LogoutUseCase
@@ -118,7 +119,7 @@ fun StudentHubApp() {
     )
 
     val librettoViewModel: LibrettoViewModel = viewModel(
-        factory = LibrettoViewModel.provideFactory(esameRepository, obiettivoRepository, gamificationRepository)
+        factory = LibrettoViewModel.provideFactory(esameRepository, gamificationRepository)
     )
 
     val statisticheViewModel: StatisticheViewModel = viewModel(
@@ -132,9 +133,8 @@ fun StudentHubApp() {
 
     val obiettiviViewModel: ObiettiviViewModel = viewModel(
         factory = ObiettiviViewModel.provideFactory(
-            getObiettiviUseCase = GetObiettiviUseCase(
-                repository = obiettivoRepository
-            )
+            getObiettiviUseCase = GetObiettiviUseCase(obiettivoRepository),
+            refreshObiettiviUseCase = RefreshObiettiviUseCase(obiettivoRepository)
         )
     )
 

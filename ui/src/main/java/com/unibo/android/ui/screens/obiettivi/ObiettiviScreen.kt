@@ -76,6 +76,7 @@ fun ObiettiviScreen(
 
     LaunchedEffect(Unit) {
         gamificationViewModel.refreshAll()
+        viewModel.refreshObiettivi()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val permissionStatus = ContextCompat.checkSelfPermission(
