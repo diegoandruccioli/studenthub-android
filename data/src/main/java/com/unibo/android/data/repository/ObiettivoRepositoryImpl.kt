@@ -29,17 +29,27 @@ class ObiettivoRepositoryImpl(
         runCatching {
             val response = api.getBadges()
             if (response.isSuccessful) {
-                val badges = response.body() ?: emptyList()
-                val entities = badges.map { dto ->
+                val badgesDto = response.body() ?: emptyList()
+                
+                // Mappatura DTO -> Entity per aggiornare l'intero catalogo
+                // Il backend fornisce sia gli sbloccati che i non sbloccati (se configurato)
+                // Se fornisce solo gli sbloccati, usiamo il pattern "reset e mark"
+                
+                val entities = badgesDto.map { dto ->
                     ObiettivoEntity(
-                        id = dto.id,
+                        id = dto.safeId,
                         nome = dto.nome,
                         descrizione = dto.descrizione,
-                        completato = dto.completato == 1,
-                        premioXp = dto.premioXp
+                        completato = dto.completato == 1 || (dto.idObiettivo != null), 
+                        premioXp = dto.xpValore
                     )
                 }
-                obiettivoDao.insertAll(entities)
+
+                if (entities.isNotEmpty()) {
+                    // Aggiornamento atomico del catalogo e dello stato
+                    obiettivoDao.insertAll(entities)
+                }
+
                 Unit
             } else {
                 throw Exception("Errore nel caricamento degli obiettivi")
