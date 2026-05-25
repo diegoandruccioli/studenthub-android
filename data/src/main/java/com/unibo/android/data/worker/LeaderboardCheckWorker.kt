@@ -7,27 +7,28 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.unibo.android.data.local.RankDataStore
-import com.unibo.android.domain.repository.GamificationRepository
-import kotlinx.coroutines.flow.firstOrNull
 import com.unibo.android.data.R
+import com.unibo.android.data.local.RankDataStore
+import com.unibo.android.data.repository.GamificationRepositoryImpl
+import kotlinx.coroutines.flow.firstOrNull
 
 class LeaderboardCheckWorker(
-    private val context: Context,
+    appContext: Context,
     workerParams: WorkerParameters,
-    private val repository: GamificationRepository,
-    private val rankDataStore: RankDataStore
-) : CoroutineWorker(context, workerParams) {
+) : CoroutineWorker(appContext, workerParams) {
+
+    private val rankDataStore = RankDataStore(appContext)
+    private val repository = GamificationRepositoryImpl(appContext)
 
     override suspend fun doWork(): Result {
         return try {
             val oldRank = rankDataStore.currentRank.firstOrNull()
-            
-            // Aggiorniamo le statistiche, che a loro volta aggiornano il rankDataStore
+
+            // getUserStats() aggiorna il rankDataStore; leggiamo il nuovo rank da lì
             val statsResult = repository.getUserStats()
             if (statsResult.isSuccess) {
-                val newRank = statsResult.getOrNull()?.rank
-                
+                val newRank = rankDataStore.currentRank.firstOrNull()
+
                 if (oldRank != null && newRank != null && newRank < oldRank) {
                     showNotification(
                         "Rank Aggiornato!",
@@ -42,7 +43,7 @@ class LeaderboardCheckWorker(
     }
 
     private fun showNotification(title: String, message: String) {
-        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = "gamification_channel"
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -50,7 +51,7 @@ class LeaderboardCheckWorker(
             manager.createNotificationChannel(channel)
         }
         
-        val notification = NotificationCompat.Builder(context, channelId)
+        val notification = NotificationCompat.Builder(applicationContext, channelId)
             // L'icona andrebbe impostata a una esistente, usiamo un placeholder standard o mipmap/ic_launcher
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)

@@ -9,11 +9,12 @@ import androidx.work.WorkManager
 import com.unibo.android.data.di.RepositoryProviderImpl
 import com.unibo.android.data.local.SessionDataStore
 import com.unibo.android.data.remote.NetworkClient
+import com.unibo.android.data.worker.LeaderboardCheckWorker
 import com.unibo.android.data.worker.SyncExamsWorker
 import com.unibo.android.domain.di.RepositoryProvider
-import com.unibo.android.domain.di.UseCasesProvider
 import com.unibo.android.domain.repository.AuthRepository
 import com.unibo.android.domain.repository.EsameRepository
+import com.unibo.android.domain.repository.GamificationRepository
 import com.unibo.android.domain.repository.ObiettivoRepository
 import com.unibo.android.domain.repository.SettingsRepository
 import java.util.concurrent.TimeUnit
@@ -26,8 +27,8 @@ class CustomApplication : Application(), RepositoryProvider {
         super.onCreate()
         NetworkClient.init(this, SessionDataStore(this))
         repositoryProviderImpl = RepositoryProviderImpl(this)
-        UseCasesProvider.setup(repositoryProviderImpl)
         scheduleSyncWorker()
+        scheduleLeaderboardWorker()
     }
 
     private fun scheduleSyncWorker() {
@@ -39,6 +40,20 @@ class CustomApplication : Application(), RepositoryProvider {
             .build()
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "SyncExamsWorker",
+            ExistingPeriodicWorkPolicy.KEEP,
+            request
+        )
+    }
+
+    private fun scheduleLeaderboardWorker() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+        val request = PeriodicWorkRequestBuilder<LeaderboardCheckWorker>(15, TimeUnit.MINUTES)
+            .setConstraints(constraints)
+            .build()
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "LeaderboardCheckWorker",
             ExistingPeriodicWorkPolicy.KEEP,
             request
         )
@@ -56,6 +71,6 @@ class CustomApplication : Application(), RepositoryProvider {
     override fun getSettingsRepository(): SettingsRepository =
         repositoryProviderImpl.getSettingsRepository()
 
-    override fun getGamificationRepository(): com.unibo.android.domain.repository.GamificationRepository =
+    override fun getGamificationRepository(): GamificationRepository =
         repositoryProviderImpl.getGamificationRepository()
 }

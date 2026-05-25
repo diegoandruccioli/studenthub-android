@@ -10,24 +10,24 @@ class GetStatisticheUseCase(
     private val repository: EsameRepository
 ) {
     operator fun invoke(): Flow<Result<Statistiche>> = flow {
-        try {
-            // TENTATIVO 1: ONLINE (Backend remoto)
-            val remoteStats = repository.getStatisticheRemote()
-            
-            remoteStats.onSuccess { stats ->
-                emit(Result.success(stats))
-            }.onFailure { 
-                throw it // Fallback al blocco catch
-            }
-        } catch (e: Exception) {
+        // TENTATIVO 1: ONLINE (Backend remoto)
+        val remote = repository.getStatisticheRemote()
+
+        // Compute result outside any catch — required by Flow exception transparency
+        // (emit() inside a catch block causes IllegalStateException when the downstream
+        //  collector throws AbortFlowException after flow.first() receives its value)
+        val result: Result<Statistiche> = if (remote.isSuccess) {
+            remote
+        } else {
             // TENTATIVO 2: OFFLINE (Fallback locale)
             try {
                 val esamiLocali = repository.getEsami().first()
-                val statsLocali = StatisticheCalculator.calcola(esamiLocali)
-                emit(Result.success(statsLocali))
-            } catch (localError: Exception) {
-                emit(Result.failure(localError))
+                Result.success(StatisticheCalculator.calcola(esamiLocali))
+            } catch (e: Exception) {
+                Result.failure(e)
             }
         }
+
+        emit(result) // always outside any catch block
     }
 }

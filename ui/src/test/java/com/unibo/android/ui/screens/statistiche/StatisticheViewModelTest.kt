@@ -7,6 +7,7 @@ import com.unibo.android.domain.usecase.GetStatisticheUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -52,9 +53,12 @@ class StatisticheViewModelTest {
         whenever(useCase()).thenReturn(flowOf(Result.success(statisticheVuote())))
 
         val vm = StatisticheViewModel(useCase, Locale.ITALY)
+        // Subscribe per triggerare WhileSubscribed(5000)
+        val job = launch { vm.uiState.collect {} }
         advanceUntilIdle()
 
         assertEquals(StatisticheUiState.Empty, vm.uiState.value)
+        job.cancel()
     }
 
     @Test
@@ -71,6 +75,7 @@ class StatisticheViewModelTest {
         whenever(useCase()).thenReturn(flowOf(Result.success(stats)))
 
         val vm = StatisticheViewModel(useCase, Locale.ITALY)
+        val job = launch { vm.uiState.collect {} }
         advanceUntilIdle()
 
         val state = vm.uiState.value
@@ -78,6 +83,7 @@ class StatisticheViewModelTest {
         val uiModel = (state as StatisticheUiState.Success).uiModel
         assertEquals("27,5", uiModel.mediaPonderata)
         assertEquals("12", uiModel.cfuSostenuti)
+        job.cancel()
     }
 
     @Test
@@ -85,11 +91,13 @@ class StatisticheViewModelTest {
         whenever(useCase()).thenReturn(flowOf(Result.failure(Exception("Errore DB"))))
 
         val vm = StatisticheViewModel(useCase, Locale.ITALY)
+        val job = launch { vm.uiState.collect {} }
         advanceUntilIdle()
 
         val state = vm.uiState.value
         assertTrue(state is StatisticheUiState.Error)
         assertEquals("Errore DB", (state as StatisticheUiState.Error).message)
+        job.cancel()
     }
 
     private fun statisticheVuote() = Statistiche(0.0, 0, 0.0, emptyList())

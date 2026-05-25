@@ -1,10 +1,8 @@
 package com.unibo.android.data.di
 
 import android.content.Context
-import com.unibo.android.data.local.RankDataStore
 import com.unibo.android.data.local.SessionDataStore
 import com.unibo.android.data.local.StudentHubDatabase
-import com.unibo.android.data.remote.NetworkClient
 import com.unibo.android.data.repository.AuthRepositoryImpl
 import com.unibo.android.data.repository.EsameRepositoryImpl
 import com.unibo.android.data.repository.GamificationRepositoryImpl
@@ -25,18 +23,11 @@ class RepositoryProviderImpl(private val context: Context) : RepositoryProvider 
     private val obiettivoRepo: ObiettivoRepository by lazy { ObiettivoRepositoryImpl(db.obiettiviDao()) }
     private val authRepo: AuthRepository by lazy { AuthRepositoryImpl(context) }
     private val settingsRepo: SettingsRepository by lazy { SettingsRepositoryImpl(context) }
-
-    private val gamificationRepo: GamificationRepository by lazy {
-        GamificationRepositoryImpl(
-            apiService = NetworkClient.gamificationApiService,
-            rankDataStore = RankDataStore(context),
-            sessionDataStore = sessionDataStore
-        )
-    }
+    private val gamificationRepo: GamificationRepository by lazy { GamificationRepositoryImpl(context) }
 
     override fun getEsameRepository(): EsameRepository = esameRepo
     override fun getObiettivoRepository(): ObiettivoRepository = obiettivoRepo
     override fun getAuthRepository(): AuthRepository = authRepo
     override fun getSettingsRepository(): SettingsRepository = settingsRepo
-    override fun getGamificationRepository(): com.unibo.android.domain.repository.GamificationRepository = gamificationRepo
+    override fun getGamificationRepository(): GamificationRepository = gamificationRepo
 }

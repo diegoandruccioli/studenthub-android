@@ -4,8 +4,8 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -21,7 +21,7 @@ class SessionDataStore(private val context: Context) {
         .map { prefs -> prefs[IS_LOGGED_IN] ?: false }
 
     val userId: Flow<Int> = context.sessionDataStore.data
-        .map { prefs -> prefs[USER_ID] ?: -1 }
+        .map { prefs -> prefs[USER_ID] ?: 0 }
 
     suspend fun setLoggedIn(value: Boolean) {
         context.sessionDataStore.edit { prefs -> prefs[IS_LOGGED_IN] = value }

@@ -2,10 +2,11 @@ package com.unibo.android.ui.screens.libretto
 
 import com.unibo.android.domain.model.Esame
 import com.unibo.android.domain.usecase.AddEsameUseCase
-import com.unibo.android.domain.usecase.CheckObiettiviUseCase
 import com.unibo.android.domain.usecase.DeleteEsameUseCase
 import com.unibo.android.domain.usecase.GetEsamiUseCase
 import com.unibo.android.domain.usecase.RefreshEsamiUseCase
+import com.unibo.android.domain.usecase.RefreshObiettiviUseCase
+import com.unibo.android.domain.usecase.RefreshUserStatsUseCase
 import com.unibo.android.domain.usecase.UpdateEsameUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,7 +19,6 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.mock
@@ -35,8 +35,9 @@ class LibrettoViewModelTest {
     private val addEsame: AddEsameUseCase = mock()
     private val updateEsame: UpdateEsameUseCase = mock()
     private val deleteEsame: DeleteEsameUseCase = mock()
-    private val checkObiettivi: CheckObiettiviUseCase = mock()
     private val refreshEsami: RefreshEsamiUseCase = mock()
+    private val refreshUserStats: RefreshUserStatsUseCase = mock()
+    private val refreshObiettivi: RefreshObiettiviUseCase = mock()
 
     @Before
     fun setup() {
@@ -50,7 +51,15 @@ class LibrettoViewModelTest {
 
     private fun makeVm(): LibrettoViewModel {
         whenever(getEsami()).thenReturn(flowOf(esami))
-        return LibrettoViewModel(getEsami, addEsame, updateEsame, deleteEsame, checkObiettivi, refreshEsami)
+        return LibrettoViewModel(
+            getEsamiUseCase = getEsami,
+            addEsameUseCase = addEsame,
+            updateEsameUseCase = updateEsame,
+            deleteEsameUseCase = deleteEsame,
+            refreshEsamiUseCase = refreshEsami,
+            refreshUserStatsUseCase = refreshUserStats,
+            refreshObiettiviUseCase = refreshObiettivi
+        )
     }
 
     private val esame1 = Esame(id = 1, nome = "Analisi", voto = 28, lode = false, cfu = 6, dataEsame = LocalDate.of(2025, 1, 10))
@@ -111,7 +120,8 @@ class LibrettoViewModelTest {
     }
 
     @Test
-    fun `addEsame - chiama checkObiettivi dopo aggiunta`() = runTest {
+    fun `addEsame - chiama refreshUserStats e refreshObiettivi dopo aggiunta`() = runTest {
+        whenever(addEsame(esame1)).thenReturn(Result.success(Unit))
         val vm = makeVm()
         advanceUntilIdle()
 
@@ -119,11 +129,13 @@ class LibrettoViewModelTest {
         advanceUntilIdle()
 
         verify(addEsame)(esame1)
-        verify(checkObiettivi)()
+        verify(refreshUserStats)()
+        verify(refreshObiettivi)()
     }
 
     @Test
-    fun `deleteEsame - chiama checkObiettivi dopo eliminazione`() = runTest {
+    fun `deleteEsame - chiama refreshUserStats e refreshObiettivi dopo eliminazione`() = runTest {
+        whenever(deleteEsame(esame1)).thenReturn(Result.success(Unit))
         val vm = makeVm()
         advanceUntilIdle()
 
@@ -131,11 +143,13 @@ class LibrettoViewModelTest {
         advanceUntilIdle()
 
         verify(deleteEsame)(esame1)
-        verify(checkObiettivi)()
+        verify(refreshUserStats)()
+        verify(refreshObiettivi)()
     }
 
     @Test
-    fun `updateEsame - non chiama checkObiettivi`() = runTest {
+    fun `updateEsame - chiama refreshUserStats e refreshObiettivi dopo aggiornamento`() = runTest {
+        whenever(updateEsame(esame1)).thenReturn(Result.success(Unit))
         val vm = makeVm()
         advanceUntilIdle()
 
@@ -143,6 +157,7 @@ class LibrettoViewModelTest {
         advanceUntilIdle()
 
         verify(updateEsame)(esame1)
-        // verify(checkObiettivi, never())() — il check non è necessario per update
+        verify(refreshUserStats)()
+        verify(refreshObiettivi)()
     }
 }

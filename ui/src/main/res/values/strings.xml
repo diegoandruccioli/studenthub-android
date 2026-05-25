@@ -53,6 +53,12 @@
     <string name="descrizione_obiettivi">Completa le sfide e guadagna XP</string>
     <string name="label_premio">%1$d xp</string>
     <string name="sezione_obiettivi">Elenco Obiettivi</string>
+    <string name="sezione_classifica">Classifica Globale</string>
+    <string name="errore_carica_classifica">Impossibile caricare la classifica</string>
+    <string name="notifiche_permesso_titolo">Permesso notifiche</string>
+    <string name="notifiche_permesso_testo">Per ricevere aggiornamenti sul tuo rank in classifica e nuovi obiettivi sbloccati, abbiamo bisogno di poterti inviare notifiche.</string>
+    <string name="notifiche_permesso_conferma">Ho capito, chiedi permesso</string>
+    <string name="notifiche_permesso_rifiuta">No, grazie</string>
 
     <!-- Login -->
     <string name="login_title">Bentornato</string>

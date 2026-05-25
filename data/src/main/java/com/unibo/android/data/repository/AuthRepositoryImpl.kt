@@ -28,6 +28,7 @@ class AuthRepositoryImpl(context: Context) : AuthRepository {
                     val userDto = body?.user
                     if (body?.success == true && userDto != null) {
                         sessionDataStore.setLoggedIn(true)
+                        sessionDataStore.setUserId(userDto.id)
                         Result.success(
                             User(userDto.id, userDto.nome, userDto.cognome, userDto.email, userDto.ruolo)
                         )
@@ -59,6 +60,7 @@ class AuthRepositoryImpl(context: Context) : AuthRepository {
                 val userDto = body?.user
                 if (body?.success == true && userDto != null) {
                     sessionDataStore.setLoggedIn(true)
+                    sessionDataStore.setUserId(userDto.id)
                     Result.success(
                         User(userDto.id, userDto.nome, userDto.cognome, userDto.email, userDto.ruolo)
                     )

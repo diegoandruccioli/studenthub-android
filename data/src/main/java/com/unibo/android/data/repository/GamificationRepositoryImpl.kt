@@ -1,86 +1,103 @@
 package com.unibo.android.data.repository
 
+import android.content.Context
 import com.unibo.android.data.local.RankDataStore
 import com.unibo.android.data.local.SessionDataStore
-import com.unibo.android.data.remote.GamificationApiService
+import com.unibo.android.data.local.StudentHubDatabase
+import com.unibo.android.data.local.entity.LeaderboardEntity
+import com.unibo.android.data.remote.NetworkClient
 import com.unibo.android.domain.model.LeaderboardEntry
 import com.unibo.android.domain.model.UserStats
 import com.unibo.android.domain.repository.GamificationRepository
-import com.unibo.android.domain.utils.GamificationUtils
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import retrofit2.HttpException
+import java.io.IOException
 
-class GamificationRepositoryImpl(
-    private val apiService: GamificationApiService,
-    private val rankDataStore: RankDataStore,
-    private val sessionDataStore: SessionDataStore,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
-) : GamificationRepository {
+class GamificationRepositoryImpl(context: Context) : GamificationRepository {
 
-    override suspend fun getLeaderboard(): Result<List<LeaderboardEntry>> = withContext(ioDispatcher) {
-        runCatching {
-            // Ottieni l'ID dell'utente loggato dal DataStore
-            val currentUserId = getCurrentUserIdFromDataStore()
-            
-            val response = apiService.getLeaderboard()
+    private val api = NetworkClient.gamificationApiService
+    private val rankDataStore = RankDataStore(context)
+    private val sessionDataStore = SessionDataStore(context)
+    private val leaderboardDao = StudentHubDatabase.getInstance(context).leaderboardDao()
+
+    override val userStatsFlow: Flow<UserStats> = combine(
+        rankDataStore.currentXp,
+        rankDataStore.currentRank,
+        rankDataStore.currentLevel,
+        rankDataStore.levelTitle,
+        rankDataStore.progressPercentage,
+        sessionDataStore.userId,
+        rankDataStore.prossimaSoglia,
+    ) { params: Array<Any?> ->
+        UserStats(
+            userId = params[5] as Int,
+            xp = params[0] as Int,
+            rank = params[1] as Int,
+            level = params[2] as Int,
+            levelTitle = params[3] as String,
+            progressPercentage = params[4] as Float,
+            xpLabel = "", // calcolato via GetGamificationDataUseCase
+            prossimaSoglia = params[6] as Int?
+        )
+    }
+
+    override val leaderboardFlow: Flow<List<LeaderboardEntry>> = leaderboardDao.getLeaderboard()
+        .map { entities ->
+            entities.map {
+                LeaderboardEntry(
+                    userId = it.userId,
+                    nome = it.nome,
+                    cognome = it.cognome,
+                    xpTotali = it.xpTotali,
+                )
+            }
+        }
+
+    override suspend fun getUserStats(): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val response = api.getStatus()
             if (response.isSuccessful) {
-                val body = response.body() ?: throw Exception("Empty body")
-                body.leaderboard.mapIndexed { index, dto ->
-                    LeaderboardEntry(
-                        rank = index + 1,
-                        userId = dto.id,
-                        nome = dto.nome,
-                        cognome = "",  // Il cognome non è ritornato dall'API nel DTO, usare fallback
-                        xp = dto.xpTotali,
-                        isCurrentUser = dto.id == currentUserId
+                response.body()?.let { rankDataStore.saveStatus(it) }
+                Result.success(Unit)
+            } else {
+                Result.failure(HttpException(response))
+            }
+        } catch (e: IOException) {
+            Result.failure(Exception("Errore di rete: controlla la connessione internet", e))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getLeaderboard(): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val response = api.getLeaderboard()
+            if (response.isSuccessful) {
+                val responseDto = response.body()
+                val entriesDto = responseDto?.leaderboard ?: emptyList()
+                responseDto?.myRank?.let { rankDataStore.saveMyRank(it) }
+
+                val entities = entriesDto.map {
+                    LeaderboardEntity(
+                        userId = it.userId,
+                        nome = it.nome,
+                        cognome = it.cognome ?: "",
+                        xpTotali = it.xpTotali,
                     )
                 }
+                leaderboardDao.refreshLeaderboard(entities)
+                Result.success(Unit)
             } else {
-                throw Exception("Error fetching leaderboard: ${response.code()}")
+                Result.failure(HttpException(response))
             }
-        }
-    }
-
-    override suspend fun getUserStats(): Result<UserStats> = withContext(ioDispatcher) {
-        runCatching {
-            val response = apiService.getMyStatus()
-            if (response.isSuccessful) {
-                val body = response.body() ?: throw Exception("Empty body")
-                
-                // Calcola il level se non è ritornato dall'API
-                val level = body.level ?: GamificationUtils.calculateLevel(body.xp)
-                
-                val stats = UserStats(
-                    userId = body.userId,
-                    nome = "",  // Il nome non è ritornato dall'API, recuperarlo altrove se necessario
-                    cognome = "",
-                    xp = body.xp,
-                    level = level,
-                    rank = body.rank
-                )
-                
-                // Salva rank, XP e userId nel DataStore locale
-                rankDataStore.saveRankAndXp(stats.rank, stats.xp)
-                sessionDataStore.setUserId(stats.userId)  // Salva l'ID utente per getLeaderboard()
-                
-                stats
-            } else {
-                throw Exception("Error fetching stats: ${response.code()}")
-            }
-        }
-    }
-
-    /** da SessionDataStore.
-     * Ritorna -1 se l'ID non è disponibile (l'utente non è ancora stato autenticato).
-     */
-    private suspend fun getCurrentUserIdFromDataStore(): Int {
-        return try {
-            sessionDataStore.userId.first()
+        } catch (e: IOException) {
+            Result.failure(Exception("Errore di rete: impossibile scaricare la classifica", e))
         } catch (e: Exception) {
-            -1
+            Result.failure(e)
         }
-        return -1  // TODO: Implementare un meccanismo affidabile per ottenere l'ID utente loggato
     }
 }

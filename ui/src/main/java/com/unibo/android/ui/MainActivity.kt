@@ -34,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.unibo.android.domain.di.RepositoryProvider
 import com.unibo.android.domain.usecase.GetObiettiviUseCase
+import com.unibo.android.domain.usecase.RefreshObiettiviUseCase
 import com.unibo.android.domain.usecase.GetSettingsUseCase
 import com.unibo.android.domain.usecase.GetStatisticheUseCase
 import com.unibo.android.domain.usecase.LogoutUseCase
@@ -41,18 +42,16 @@ import com.unibo.android.domain.usecase.UpdateSettingsUseCase
 import com.unibo.android.ui.screens.auth.AuthViewModel
 import com.unibo.android.ui.screens.auth.LoginScreen
 import com.unibo.android.ui.screens.auth.RegisterScreen
+import com.unibo.android.ui.screens.gamification.GamificationViewModel
 import com.unibo.android.ui.screens.libretto.LibrettoScreen
 import com.unibo.android.ui.screens.libretto.LibrettoViewModel
 import com.unibo.android.ui.screens.obiettivi.ObiettiviScreen
 import com.unibo.android.ui.screens.obiettivi.ObiettiviViewModel
-import com.unibo.android.ui.gamification.GamificationViewModel
-import com.unibo.android.domain.usecase.GetGamificationDataUseCase
 import com.unibo.android.ui.screens.profilo.ProfiloScreen
 import com.unibo.android.ui.screens.profilo.ProfiloViewModel
 import com.unibo.android.ui.screens.statistiche.StatisticheScreen
 import com.unibo.android.ui.screens.statistiche.StatisticheViewModel
 import com.unibo.android.ui.theme.StudentHubTheme
-import kotlinx.coroutines.Dispatchers
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
@@ -112,9 +111,14 @@ fun StudentHubApp() {
     val obiettivoRepository = repositoryProvider.getObiettivoRepository()
     val settingsRepository = repositoryProvider.getSettingsRepository()
     val authRepository = repositoryProvider.getAuthRepository()
+    val gamificationRepository = repositoryProvider.getGamificationRepository()
+
+    val gamificationViewModel: GamificationViewModel = viewModel(
+        factory = GamificationViewModel.provideFactory(gamificationRepository)
+    )
 
     val librettoViewModel: LibrettoViewModel = viewModel(
-        factory = LibrettoViewModel.provideFactory(esameRepository, obiettivoRepository)
+        factory = LibrettoViewModel.provideFactory(esameRepository, gamificationRepository, obiettivoRepository)
     )
 
     val statisticheViewModel: StatisticheViewModel = viewModel(
@@ -128,9 +132,8 @@ fun StudentHubApp() {
 
     val obiettiviViewModel: ObiettiviViewModel = viewModel(
         factory = ObiettiviViewModel.provideFactory(
-            getObiettiviUseCase = GetObiettiviUseCase(
-                repository = obiettivoRepository
-            )
+            getObiettiviUseCase = GetObiettiviUseCase(obiettivoRepository),
+            refreshObiettiviUseCase = RefreshObiettiviUseCase(obiettivoRepository)
         )
     )
 
@@ -139,13 +142,6 @@ fun StudentHubApp() {
             getSettingsUseCase = GetSettingsUseCase(settingsRepository),
             updateSettingsUseCase = UpdateSettingsUseCase(settingsRepository),
             logoutUseCase = LogoutUseCase(authRepository)
-        )
-    )
-
-    val gamificationRepository = repositoryProvider.getGamificationRepository()
-    val gamificationViewModel: GamificationViewModel = viewModel(
-        factory = GamificationViewModel.provideFactory(
-            useCase = GetGamificationDataUseCase(gamificationRepository)
         )
     )
 

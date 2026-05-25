@@ -14,13 +14,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.Circle
@@ -41,7 +41,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -51,10 +50,10 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.unibo.android.domain.model.Obiettivo
 import com.unibo.android.ui.R
+import com.unibo.android.ui.screens.gamification.GamificationUiState
+import com.unibo.android.ui.screens.gamification.GamificationViewModel
+import com.unibo.android.ui.screens.gamification.components.LeaderboardItem
 
-import com.unibo.android.ui.gamification.GamificationViewModel
-import com.unibo.android.ui.gamification.GamificationUiState
-import com.unibo.android.ui.components.LeaderboardList
 
 @Composable
 fun ObiettiviScreen(
@@ -63,6 +62,7 @@ fun ObiettiviScreen(
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val gamificationState by gamificationViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showRationaleDialog by remember { mutableStateOf(false) }
 
@@ -71,11 +71,14 @@ fun ObiettiviScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            // Permesso concesso: l'app ora può inviare notifiche (es. aggiornamenti rank)
+            // Permesso concesso
         }
     }
 
     LaunchedEffect(Unit) {
+        gamificationViewModel.refreshAll()
+        viewModel.refreshObiettivi()
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val permissionStatus = ContextCompat.checkSelfPermission(
                 context,
@@ -98,30 +101,34 @@ fun ObiettiviScreen(
     if (showRationaleDialog) {
         AlertDialog(
             onDismissRequest = { showRationaleDialog = false },
-            title = { Text("Permesso notifiche") },
-            text = { Text("Per ricevere aggiornamenti sul tuo rank in classifica e nuovi obiettivi sbloccati, abbiamo bisogno di poterti inviare notifiche.") },
+            title = { Text(stringResource(R.string.notifiche_permesso_titolo)) },
+            text = { Text(stringResource(R.string.notifiche_permesso_testo)) },
             confirmButton = {
                 TextButton(onClick = {
                     showRationaleDialog = false
                     permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }) {
-                    Text("Ho capito, chiedi permesso")
+                    Text(stringResource(R.string.notifiche_permesso_conferma))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showRationaleDialog = false }) {
-                    Text("No, grazie")
+                    Text(stringResource(R.string.notifiche_permesso_rifiuta))
                 }
             }
         )
     }
 
-    ObiettiviScreenContent(
-        uiState = uiState,
-        gamificationState = gamificationViewModel.uiState.collectAsStateWithLifecycle().value,
-        modifier = modifier
-    )
+    Box(modifier = modifier.fillMaxSize()) {
+        ObiettiviScreenContent(
+            uiState = uiState,
+            gamificationState = gamificationState,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
 }
+
+
 
 @Composable
 fun ObiettiviScreenContent(
@@ -129,14 +136,14 @@ fun ObiettiviScreenContent(
     gamificationState: GamificationUiState,
     modifier: Modifier = Modifier
 ) {
-    val blueColor = Color(0xFF1A5A96)
-
     Column(
         modifier = modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // --- INTESTAZIONE ---
         Column {
             Text(
                 text = stringResource(R.string.obiettivi_breadcrumb),
@@ -157,27 +164,25 @@ fun ObiettiviScreenContent(
             )
         }
 
-        if (gamificationState is GamificationUiState.Success) {
-            Text(
-                text = "Classifica Studenti",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            LeaderboardList(
-                entries = gamificationState.leaderboard,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
+        // --- SEZIONE OBIETTIVI ---
         when (val state = uiState) {
             is ObiettiviUiState.Loading -> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     CircularProgressIndicator()
                 }
             }
             is ObiettiviUiState.Error -> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(state.message, color = MaterialTheme.colorScheme.error)
                 }
             }
@@ -191,6 +196,7 @@ fun ObiettiviScreenContent(
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column {
+                        // Header Tabella Obiettivi
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -215,12 +221,13 @@ fun ObiettiviScreenContent(
                                 )
                             }
                         }
-
-                        LazyColumn(
+                        
+                        // Lista Obiettivi
+                        Column(
                             modifier = Modifier.padding(12.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            items(state.obiettivi, key = { it.id }) { obiettivo ->
+                            state.obiettivi.forEach { obiettivo ->
                                 ObiettivoItem(obiettivo)
                             }
                         }
@@ -228,6 +235,64 @@ fun ObiettiviScreenContent(
                 }
             }
         }
+
+        // --- SEZIONE CLASSIFICA ---
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = stringResource(R.string.sezione_classifica),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                when (val state = gamificationState) {
+                    is GamificationUiState.Loading -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    is GamificationUiState.Success -> {
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            state.leaderboard.forEachIndexed { index, entry ->
+                                LeaderboardItem(
+                                    entry = entry,
+                                    rank = index + 1
+                                )
+                            }
+                        }
+                    }
+                    is GamificationUiState.Error -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.errore_carica_classifica),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(64.dp))
     }
 }
 

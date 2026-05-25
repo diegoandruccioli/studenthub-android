@@ -4,5 +4,5 @@ import com.unibo.android.domain.model.Esame
 import com.unibo.android.domain.repository.EsameRepository
 
 class UpdateEsameUseCase(private val repository: EsameRepository) {
-    suspend operator fun invoke(esame: Esame) = repository.updateEsame(esame)
+    suspend operator fun invoke(esame: Esame): Result<Unit> = repository.updateEsame(esame)
 }
