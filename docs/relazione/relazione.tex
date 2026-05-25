@@ -174,7 +174,7 @@ dei repository (\texttt{EsameRepositoryImpl}, \texttt{AuthRepositoryImpl}, ecc.)
 i client di rete (Retrofit API service, OkHttp con \texttt{PersistentCookieJar} e
 \texttt{TokenAuthenticator}), i \texttt{DataStore} per preferenze e sessione, e i
 \texttt{CoroutineWorker} di WorkManager. Nessuna Entity Room viene mai esposta al
-di fuori di questo modulo: i mapper traducono Entity↔DomainModel al confine del layer.
+di fuori di questo modulo: i mapper traducono Entity$\leftrightarrow$DomainModel al confine del layer.
 
 \textbf{Modulo \texttt{:ui}} --- layer di presentazione realizzato interamente in
 Jetpack Compose. Contiene i composable di schermata (\texttt{LibrettoScreen},
