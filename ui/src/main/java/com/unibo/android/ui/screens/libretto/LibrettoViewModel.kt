@@ -4,12 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.unibo.android.domain.model.Esame
+import com.unibo.android.domain.model.Settings
 import com.unibo.android.domain.repository.EsameRepository
-import com.unibo.android.domain.repository.ObiettivoRepository
 import com.unibo.android.domain.repository.GamificationRepository
+import com.unibo.android.domain.repository.ObiettivoRepository
+import com.unibo.android.domain.repository.SettingsRepository
 import com.unibo.android.domain.usecase.AddEsameUseCase
 import com.unibo.android.domain.usecase.DeleteEsameUseCase
 import com.unibo.android.domain.usecase.GetEsamiUseCase
+import com.unibo.android.domain.usecase.ObserveSettingsUseCase
 import com.unibo.android.domain.usecase.RefreshEsamiUseCase
 import com.unibo.android.domain.usecase.RefreshObiettiviUseCase
 import com.unibo.android.domain.usecase.RefreshUserStatsUseCase
@@ -19,6 +22,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -33,6 +37,7 @@ class LibrettoViewModel(
     private val refreshEsamiUseCase: RefreshEsamiUseCase,
     private val refreshUserStatsUseCase: RefreshUserStatsUseCase,
     private val refreshObiettiviUseCase: RefreshObiettiviUseCase,
+    private val observeSettingsUseCase: ObserveSettingsUseCase,
 ) : ViewModel() {
 
     private val _sortBy = MutableStateFlow(SortBy.DATA)
@@ -53,6 +58,10 @@ class LibrettoViewModel(
         }
         if (order == SortOrder.DESC) sorted.reversed() else sorted
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val settings: StateFlow<Settings> = observeSettingsUseCase()
+        .filterNotNull()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, Settings("STANDARD", 18, 30))
 
     init {
         viewModelScope.launch { refreshEsamiUseCase() }
@@ -100,6 +109,7 @@ class LibrettoViewModel(
             esameRepository: EsameRepository,
             gamificationRepository: GamificationRepository,
             obiettivoRepository: ObiettivoRepository,
+            settingsRepository: SettingsRepository,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T = LibrettoViewModel(
@@ -109,7 +119,8 @@ class LibrettoViewModel(
                 deleteEsameUseCase = DeleteEsameUseCase(esameRepository),
                 refreshEsamiUseCase = RefreshEsamiUseCase(esameRepository),
                 refreshUserStatsUseCase = RefreshUserStatsUseCase(gamificationRepository),
-                refreshObiettiviUseCase = RefreshObiettiviUseCase(obiettivoRepository)
+                refreshObiettiviUseCase = RefreshObiettiviUseCase(obiettivoRepository),
+                observeSettingsUseCase = ObserveSettingsUseCase(settingsRepository),
             ) as T
         }
     }

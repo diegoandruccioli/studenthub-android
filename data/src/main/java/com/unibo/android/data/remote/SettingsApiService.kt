@@ -2,6 +2,7 @@ package com.unibo.android.data.remote
 
 import com.unibo.android.data.remote.dto.SettingsRequest
 import com.unibo.android.data.remote.dto.SettingsResponse
+import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -12,5 +13,5 @@ interface SettingsApiService {
     suspend fun getSettings(): Response<SettingsResponse>
 
     @PUT("settings")
-    suspend fun updateSettings(@Body body: SettingsRequest): Response<Unit>
+    suspend fun updateSettings(@Body body: SettingsRequest): Response<ResponseBody>
 }

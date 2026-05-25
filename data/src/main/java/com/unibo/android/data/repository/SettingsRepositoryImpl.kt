@@ -7,6 +7,7 @@ import com.unibo.android.data.remote.dto.SettingsRequest
 import com.unibo.android.domain.model.Settings
 import com.unibo.android.domain.repository.SettingsRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
@@ -46,8 +47,11 @@ class SettingsRepositoryImpl(context: Context) : SettingsRepository {
                     rgbSogliaAlta  = settings.rgbSogliaAlta
                 )
             )
+            response.body()?.close()
             if (!response.isSuccessful) throw Exception("Salvataggio impostazioni fallito")
             dataStore.save(settings)
         }
     }
+
+    override fun observeSettings(): Flow<Settings?> = dataStore.settings
 }

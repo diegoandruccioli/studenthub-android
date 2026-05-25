@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.unibo.android.domain.model.Esame
+import com.unibo.android.domain.model.Settings
 import com.unibo.android.ui.R
 import com.unibo.android.ui.screens.gamification.GamificationUiState
 import com.unibo.android.ui.screens.gamification.GamificationViewModel
@@ -60,6 +61,7 @@ fun LibrettoScreen(
     val esami by viewModel.esami.collectAsStateWithLifecycle()
     val sortBy by viewModel.sortBy.collectAsStateWithLifecycle()
     val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
     val gamificationState by gamificationViewModel.uiState.collectAsStateWithLifecycle()
 
     var showAddDialog by remember { mutableStateOf(false) }
@@ -160,6 +162,7 @@ fun LibrettoScreen(
                     items(esami, key = { it.id }) { esame ->
                         EsameCard(
                             esame = esame,
+                            settings = settings,
                             onEditClick = { esameToEdit = esame },
                             onDeleteClick = { esameToDelete = esame }
                         )

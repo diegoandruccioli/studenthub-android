@@ -1,9 +1,11 @@
 package com.unibo.android.ui.screens.libretto
 
 import com.unibo.android.domain.model.Esame
+import com.unibo.android.domain.model.Settings
 import com.unibo.android.domain.usecase.AddEsameUseCase
 import com.unibo.android.domain.usecase.DeleteEsameUseCase
 import com.unibo.android.domain.usecase.GetEsamiUseCase
+import com.unibo.android.domain.usecase.ObserveSettingsUseCase
 import com.unibo.android.domain.usecase.RefreshEsamiUseCase
 import com.unibo.android.domain.usecase.RefreshObiettiviUseCase
 import com.unibo.android.domain.usecase.RefreshUserStatsUseCase
@@ -38,6 +40,7 @@ class LibrettoViewModelTest {
     private val refreshEsami: RefreshEsamiUseCase = mock()
     private val refreshUserStats: RefreshUserStatsUseCase = mock()
     private val refreshObiettivi: RefreshObiettiviUseCase = mock()
+    private val observeSettings: ObserveSettingsUseCase = mock()
 
     @Before
     fun setup() {
@@ -51,6 +54,7 @@ class LibrettoViewModelTest {
 
     private fun makeVm(): LibrettoViewModel {
         whenever(getEsami()).thenReturn(flowOf(esami))
+        whenever(observeSettings()).thenReturn(flowOf(Settings("STANDARD", 18, 30)))
         return LibrettoViewModel(
             getEsamiUseCase = getEsami,
             addEsameUseCase = addEsame,
@@ -58,7 +62,8 @@ class LibrettoViewModelTest {
             deleteEsameUseCase = deleteEsame,
             refreshEsamiUseCase = refreshEsami,
             refreshUserStatsUseCase = refreshUserStats,
-            refreshObiettiviUseCase = refreshObiettivi
+            refreshObiettiviUseCase = refreshObiettivi,
+            observeSettingsUseCase = observeSettings,
         )
     }
 
