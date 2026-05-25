@@ -24,9 +24,10 @@ class LeaderboardCheckWorker(
         return try {
             val oldRank = rankDataStore.currentRank.firstOrNull()
 
-            // getUserStats() aggiorna il rankDataStore; leggiamo il nuovo rank da lì
-            val statsResult = repository.getUserStats()
-            if (statsResult.isSuccess) {
+            // getLeaderboard() aggiorna currentRank in RankDataStore via saveMyRank();
+            // getUserStats() aggiorna solo xp/level/progress, NON il rank.
+            val leaderboardResult = repository.getLeaderboard()
+            if (leaderboardResult.isSuccess) {
                 val newRank = rankDataStore.currentRank.firstOrNull()
 
                 if (oldRank != null && newRank != null && newRank < oldRank) {
