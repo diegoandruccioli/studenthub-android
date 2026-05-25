@@ -35,4 +35,8 @@ class SettingsDataStore(private val context: Context) {
             prefs[SOGLIA_ALTA]  = settings.rgbSogliaAlta
         }
     }
+
+    suspend fun clear() {
+        context.settingsDataStore.edit { it.clear() }
+    }
 }

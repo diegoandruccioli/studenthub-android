@@ -2,7 +2,10 @@ package com.unibo.android.data.repository
 
 import android.content.Context
 import com.google.gson.Gson
+import com.unibo.android.data.local.RankDataStore
 import com.unibo.android.data.local.SessionDataStore
+import com.unibo.android.data.local.SettingsDataStore
+import com.unibo.android.data.local.StudentHubDatabase
 import com.unibo.android.data.remote.NetworkClient
 import com.unibo.android.data.remote.dto.ErrorResponse
 import com.unibo.android.data.remote.dto.LoginRequest
@@ -13,7 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
-class AuthRepositoryImpl(context: Context) : AuthRepository {
+class AuthRepositoryImpl(private val context: Context) : AuthRepository {
 
     private val apiService = NetworkClient.authApiService
     private val sessionDataStore = SessionDataStore(context)
@@ -82,6 +85,10 @@ class AuthRepositoryImpl(context: Context) : AuthRepository {
     override suspend fun logout(): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching { apiService.logout() }
         NetworkClient.clearCookies()
+        // Pulizia dati locali: garantisce isolamento tra utenti diversi sullo stesso device
+        StudentHubDatabase.getInstance(context).clearAllTables()
+        RankDataStore(context).clear()
+        SettingsDataStore(context).clear()
         sessionDataStore.setLoggedIn(false)
         Result.success(Unit)
     }

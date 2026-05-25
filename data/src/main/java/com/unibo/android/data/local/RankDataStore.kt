@@ -45,4 +45,8 @@ class RankDataStore(private val context: Context) {
             prefs[CURRENT_RANK] = rank
         }
     }
+
+    suspend fun clear() {
+        context.rankDataStore.edit { it.clear() }
+    }
 }
