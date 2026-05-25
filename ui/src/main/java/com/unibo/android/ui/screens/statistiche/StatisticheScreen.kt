@@ -283,7 +283,6 @@ fun CareerChart(
     val outlineVariantColor = MaterialTheme.colorScheme.outlineVariant
     val surfaceColor = MaterialTheme.colorScheme.surface
 
-    // Animazione per l'ingresso fluido delle linee e dei punti
     val animationProgress = remember { Animatable(0f) }
     LaunchedEffect(puntiVotiRelativi) {
         animationProgress.animateTo(1f, animationSpec = tween(durationMillis = 1500))
@@ -294,27 +293,17 @@ fun CareerChart(
         val height = size.height
         val progress = animationProgress.value
 
-        // ARCHITETTURA: Margini di sicurezza per evitare l'Edge Clipping
         val margin = 12.dp.toPx()
         val chartWidth = width - (margin * 2)
         val chartHeight = height - (margin * 2)
 
-        // 1. SINGLE SOURCE OF TRUTH: Mappatura Coordinate Pixel
-        // Mappiamo entrambi i set di dati una sola volta per garantire coerenza topologica
         val pointsMedia = puntiMediaRelativi.map { rel ->
-            Offset(
-                x = margin + (rel.x * chartWidth),
-                y = (height - margin) - (rel.y * chartHeight)
-            )
+            Offset(x = margin + (rel.x * chartWidth), y = (height - margin) - (rel.y * chartHeight))
         }
         val pointsVoti = puntiVotiRelativi.map { rel ->
-            Offset(
-                x = margin + (rel.x * chartWidth),
-                y = (height - margin) - (rel.y * chartHeight)
-            )
+            Offset(x = margin + (rel.x * chartWidth), y = (height - margin) - (rel.y * chartHeight))
         }
 
-        // 2. GRID (Background Layer - Livello più basso)
         val numGridLines = 5
         for (i in 0..numGridLines) {
             val y = (height - margin) - (i * (chartHeight / numGridLines))
@@ -326,9 +315,45 @@ fun CareerChart(
             )
         }
 
-        // 3. ANDAMENTO MEDIA (Middle Layer - Path + Gradiente)
-        // Usiamo errorColor (Rosso) per coerenza con la legenda "Media"
-        if (pointsMedia.isNotEmpty()) {
+        if (pointsVoti.size > 1) {
+            val pathVoti = Path().apply {
+                moveTo(pointsVoti[0].x, pointsVoti[0].y)
+                for (i in 1 until pointsVoti.size) {
+                    if (i < pointsVoti.size * progress) {
+                        lineTo(pointsVoti[i].x, pointsVoti[i].y)
+                    }
+                }
+            }
+
+            val fillPathVoti = Path().apply {
+                addPath(pathVoti)
+                val lastVisibleIndex = (pointsVoti.lastIndex * progress).toInt().coerceIn(0, pointsVoti.lastIndex)
+                lineTo(pointsVoti[lastVisibleIndex].x, height - margin)
+                lineTo(pointsVoti[0].x, height - margin)
+                close()
+            }
+            
+            drawPath(
+                path = fillPathVoti,
+                brush = Brush.verticalGradient(
+                    colors = listOf(primaryColor.copy(alpha = 0.25f * progress), Color.Transparent),
+                    startY = pointsVoti.minOf { it.y },
+                    endY = height - margin
+                )
+            )
+
+            drawPath(
+                path = pathVoti,
+                color = primaryColor.copy(alpha = progress),
+                style = Stroke(
+                    width = 3.dp.toPx(),
+                    join = StrokeJoin.Round,
+                    cap = StrokeCap.Round
+                )
+            )
+        }
+
+        if (pointsMedia.size > 1) {
             val pathMedia = Path().apply {
                 moveTo(pointsMedia[0].x, pointsMedia[0].y)
                 for (i in 1 until pointsMedia.size) {
@@ -340,76 +365,33 @@ fun CareerChart(
                 }
             }
 
-            // Area riempita con gradiente (Sfondo dell'andamento)
-            val fillPath = Path().apply {
-                addPath(pathMedia)
-                lineTo(pointsMedia.last().x, height - margin)
-                lineTo(pointsMedia.first().x, height - margin)
-                close()
-            }
-            drawPath(
-                path = fillPath,
-                brush = Brush.verticalGradient(
-                    colors = listOf(errorColor.copy(alpha = 0.2f * progress), Color.Transparent),
-                    startY = pointsMedia.minOf { it.y },
-                    endY = height - margin
-                )
-            )
-
-            // Linea della media continua e smussata
             drawPath(
                 path = pathMedia,
                 color = errorColor.copy(alpha = progress),
                 style = Stroke(
-                    width = 3.dp.toPx(),
+                    width = 2.5.dp.toPx(),
                     join = StrokeJoin.Round,
                     cap = StrokeCap.Round
                 )
             )
         }
 
-        // 4. NODI DEI VOTI (Livello Superiore - Layer Voti)
-        // Usiamo primaryColor (Blu) per coerenza con la legenda "Voti"
         pointsVoti.forEachIndexed { index, point ->
             if (index < pointsVoti.size * progress) {
-                // Effetto alone
-                drawCircle(
-                    color = primaryColor.copy(alpha = 0.2f),
-                    radius = 7.dp.toPx(),
-                    center = point
-                )
-                // Bordo punto
-                drawCircle(
-                    color = primaryColor,
-                    radius = 4.dp.toPx(),
-                    center = point
-                )
-                // Cuore bianco per contrasto
-                drawCircle(
-                    color = surfaceColor,
-                    radius = 2.dp.toPx(),
-                    center = point
-                )
+                drawCircle(color = primaryColor.copy(alpha = 0.2f), radius = 7.dp.toPx(), center = point)
+                drawCircle(color = primaryColor, radius = 4.dp.toPx(), center = point)
+                drawCircle(color = surfaceColor, radius = 2.dp.toPx(), center = point)
             }
         }
 
-        // 5. LINEA TARGET / MEDIA FISSA (Foreground Layer - Z-Order Finale)
-        // Disegnata per ultima per sovrastare gradiente e andamento
-        val yTarget = (height - margin) - (yMediaFissaRelativa * chartHeight)
-        drawLine(
-            color = errorColor.copy(alpha = 0.7f * progress),
-            start = Offset(margin, yTarget),
-            end = Offset(margin + (chartWidth * progress), yTarget),
-            strokeWidth = 2.dp.toPx(),
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(15f, 10f), 0f)
-        )
-        
-        // Indicatore luminoso finale sulla media fissa
-        if (progress > 0.9f) {
-            drawCircle(
-                color = errorColor.copy(alpha = (progress - 0.9f) * 10),
-                radius = 5.dp.toPx(),
-                center = Offset(margin + chartWidth, yTarget)
+        if (pointsMedia.isNotEmpty()) {
+            val yTarget = (height - margin) - (yMediaFissaRelativa * chartHeight)
+            drawLine(
+                color = errorColor.copy(alpha = 0.6f * progress),
+                start = Offset(margin, yTarget),
+                end = Offset(margin + (chartWidth * progress), yTarget),
+                strokeWidth = 2.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(15f, 10f), 0f)
             )
         }
     }
