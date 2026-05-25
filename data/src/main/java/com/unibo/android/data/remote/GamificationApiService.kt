@@ -15,4 +15,7 @@ interface GamificationApiService {
 
     @GET("gamification/badges")
     suspend fun getBadges(): Response<List<BadgeDto>>
+
+    @GET("gamification/my-badges")
+    suspend fun getMyBadges(): Response<List<BadgeDto>>
 }

@@ -27,32 +27,32 @@ class ObiettivoRepositoryImpl(
 
     override suspend fun refreshObiettivi(): Result<Unit> = withContext(ioDispatcher) {
         runCatching {
-            val response = api.getBadges()
-            if (response.isSuccessful) {
-                val badgesDto = response.body() ?: emptyList()
-                
-                // Mappatura DTO -> Entity per aggiornare l'intero catalogo
-                // Il backend fornisce sia gli sbloccati che i non sbloccati (se configurato)
-                // Se fornisce solo gli sbloccati, usiamo il pattern "reset e mark"
-                
-                val entities = badgesDto.map { dto ->
-                    ObiettivoEntity(
-                        id = dto.safeId,
-                        nome = dto.nome,
-                        descrizione = dto.descrizione,
-                        completato = dto.completato == 1 || (dto.idObiettivo != null), 
-                        premioXp = dto.xpValore
-                    )
-                }
+            // GET /gamification/badges → catalogo completo (nessun dato utente)
+            val allBadgesResponse = api.getBadges()
+            if (!allBadgesResponse.isSuccessful) throw Exception("Errore nel caricamento degli obiettivi")
+            val allBadges = allBadgesResponse.body() ?: emptyList()
 
-                if (entities.isNotEmpty()) {
-                    // Aggiornamento atomico del catalogo e dello stato
-                    obiettivoDao.insertAll(entities)
-                }
-
-                Unit
+            // GET /gamification/my-badges → solo badge sbloccati dall'utente
+            val myBadgesResponse = api.getMyBadges()
+            val completedIds: Set<Int> = if (myBadgesResponse.isSuccessful) {
+                myBadgesResponse.body()?.map { it.safeId }?.toSet() ?: emptySet()
             } else {
-                throw Exception("Errore nel caricamento degli obiettivi")
+                emptySet()
+            }
+
+            // Merge: catalogo + stato completamento utente
+            val entities = allBadges.map { dto ->
+                ObiettivoEntity(
+                    id = dto.safeId,
+                    nome = dto.nome,
+                    descrizione = dto.descrizione,
+                    completato = dto.safeId in completedIds,
+                    premioXp = dto.xpValore
+                )
+            }
+
+            if (entities.isNotEmpty()) {
+                obiettivoDao.insertAll(entities)
             }
         }
     }
