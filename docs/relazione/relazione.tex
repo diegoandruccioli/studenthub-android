@@ -708,26 +708,25 @@ La visualizzazione dell'andamento accademico (\texttt{StatisticheScreen}) richie
 lineare capace di mostrare l'evoluzione dei voti nel tempo e la proiezione della media fissa.
 L'inclusione di librerie di charting di terze parti avrebbe appesantito inutilmente l'APK e
 infranto il paradigma puramente dichiarativo di Compose. Era inoltre necessario gestire le
-animazioni di ingresso senza causare jank sul Main Thread e senza ricalcoli onerosi
+animazioni di ingresso senza causare pesantezza sul Main Thread e senza ricalcoli con alta potenza di calcolo
 delle coordinate spaziali ad ogni frame.
 
 \paragraph{Soluzione}
 Il grafico è stato implementato custom sfruttando le API di disegno nativo \texttt{Canvas} di
 Jetpack Compose. L'architettura del componente \texttt{CareerChart} si basa su un approccio
 a strati (Z-Order) pre-calcolato:
-1. \textbf{Mappatura univoca (Single Source of Truth):} I dati di dominio (\texttt{OffsetRelativo})
+1. \textbf{Mappatura univoca:} I dati di dominio (\texttt{OffsetRelativo})
 vengono mappati in coordinate pixel assolute una singola volta all'interno dello scope di disegno,
 garantendo coerenza topologica tra i punti dei voti e la curva di media ponderata.
 2. \textbf{Animazione reattiva:} L'ingresso del grafico è governato da un \texttt{Animatable}
 che interpola un valore da 0f a 1f in 1500ms. Questo valore moltiplica i path vettoriali
 e l'opacità dei layer.
-3. \textbf{Gestione dello strato visivo:} Il disegno avviene in ordina rigoroso: prima la griglia
-di background, poi l'area del gradiente tramite \texttt{Brush.verticalGradient}, la curva
-di Bezier creata dinamicamente interpolando i nodi con \texttt{cubicTo}, e infine il layer
+3. \textbf{Gestione dello strato visivo:} Il disegno avviene in ordine: prima la griglia
+di background, poi l'area del gradiente tramite \texttt{Brush.verticalGradient}, la curva creata dinamicamente interpolando i nodi con \texttt{cubicTo}, e infine il layer
 in foreground con le annotazioni.
 
 \begin{lstlisting}
-// Animazione per l'ingresso fluido gestita in un LaunchedEffect separato
+// Animazione
 val animationProgress = remember { Animatable(0f) }
 LaunchedEffect(puntiVotiRelativi) {
     animationProgress.animateTo(1f, animationSpec = tween(durationMillis = 1500))
@@ -735,9 +734,9 @@ LaunchedEffect(puntiVotiRelativi) {
 
 Canvas(modifier = modifier) {
     val progress = animationProgress.value
-    // ... calcolo margini e coordinate ...
+    // calcolo margini e coordinate
 
-    // Area riempita con gradiente (Sfondo dell'andamento)
+    // Area riempita con sfondo
     drawPath(
         path = fillPath,
         brush = Brush.verticalGradient(
@@ -758,8 +757,8 @@ e \textit{Layout}.
     \centering
     \includegraphics[width=0.45\textwidth]{statistiche_screen.png}
     \caption{Schermata Statistiche (\texttt{StatisticheScreen}): scomposizione dei dati
-             accademici (alto) e rendering custom su \texttt{Canvas} dell'andamento voti
-             e media ponderata (basso), con legenda integrata.}
+             accademici e rendering custom su \texttt{Canvas} dell'andamento voti
+             e media ponderata, con legenda.}
     \label{fig:statistiche}
 \end{figure}
 
