@@ -618,20 +618,27 @@ nel repository.
 \texttt{LeaderboardCheckWorker} estende \texttt{CoroutineWorker} e viene schedulato
 in \texttt{CustomApplication} ogni 15 minuti con constraint \texttt{CONNECTED}
 e policy \texttt{ExistingPeriodicWorkPolicy.KEEP} (nessuna schedulazione duplicata
-se già attiva). Il rank precedente è letto da \texttt{RankDataStore} prima della
-chiamata al server; \texttt{GamificationRepositoryImpl.getUserStats()} aggiorna
-\texttt{RankDataStore} come effetto collaterale della fetch; il nuovo rank viene
-quindi riletto e confrontato:
+se già attiva).
+Il rank precedente è letto da \texttt{RankDataStore} prima della
+chiamata al server. A questo punto, \texttt{GamificationRepositoryImpl.getLeaderboard()}
+effettua il fetch della classifica e aggiorna \texttt{RankDataStore} come effetto collaterale
+tramite \texttt{saveMyRank()}. Il nuovo rank viene quindi riletto e confrontato, garantendo
+la totale separazione tra il fetch dei dati globali e il dato statistico puntuale:
 
 \begin{lstlisting}
 override suspend fun doWork(): Result {
     return try {
         val oldRank = rankDataStore.currentRank.firstOrNull()
-        repository.getUserStats()   // aggiorna RankDataStore
-        val newRank = rankDataStore.currentRank.firstOrNull()
-        if (oldRank != null && newRank != null && newRank < oldRank) {
-            showNotification("Rank Aggiornato!",
-                "Sei salito in classifica! Ora sei al posto #$newRank")
+
+        // getLeaderboard() aggiorna currentRank in RankDataStore via saveMyRank()
+        val leaderboardResult = repository.getLeaderboard()
+
+        if (leaderboardResult.isSuccess) {
+            val newRank = rankDataStore.currentRank.firstOrNull()
+            if (oldRank != null && newRank != null && newRank < oldRank) {
+                showNotification("Rank Aggiornato!",
+                    "Sei salito in classifica! Ora sei al posto #$newRank")
+            }
         }
         Result.success()
     } catch (e: Exception) {
@@ -693,6 +700,68 @@ Il pattern è identico a quello adottato nel frontend web (Vue\,3 + Pinia), dove
 Poiché \texttt{refreshObiettivi()} viene invocato da \texttt{LibrettoViewModel} dopo
 ogni operazione CRUD sugli esami, il Flow esposto da Room aggiorna automaticamente
 la UI degli obiettivi senza alcuna navigazione o refresh manuale.
+
+\section{Rendering dichiarativo e performante del grafico carriera}
+
+\paragraph{Problema}
+La visualizzazione dell'andamento accademico (\texttt{StatisticheScreen}) richiede un grafico
+lineare capace di mostrare l'evoluzione dei voti nel tempo e la proiezione della media fissa.
+L'inclusione di librerie di charting di terze parti avrebbe appesantito inutilmente l'APK e
+infranto il paradigma puramente dichiarativo di Compose. Era inoltre necessario gestire le
+animazioni di ingresso senza causare jank sul Main Thread e senza ricalcoli onerosi
+delle coordinate spaziali ad ogni frame.
+
+\paragraph{Soluzione}
+Il grafico è stato implementato custom sfruttando le API di disegno nativo \texttt{Canvas} di
+Jetpack Compose. L'architettura del componente \texttt{CareerChart} si basa su un approccio
+a strati (Z-Order) pre-calcolato:
+1. \textbf{Mappatura univoca (Single Source of Truth):} I dati di dominio (\texttt{OffsetRelativo})
+vengono mappati in coordinate pixel assolute una singola volta all'interno dello scope di disegno,
+garantendo coerenza topologica tra i punti dei voti e la curva di media ponderata.
+2. \textbf{Animazione reattiva:} L'ingresso del grafico è governato da un \texttt{Animatable}
+che interpola un valore da 0f a 1f in 1500ms. Questo valore moltiplica i path vettoriali
+e l'opacità dei layer.
+3. \textbf{Gestione dello strato visivo:} Il disegno avviene in ordina rigoroso: prima la griglia
+di background, poi l'area del gradiente tramite \texttt{Brush.verticalGradient}, la curva
+di Bezier creata dinamicamente interpolando i nodi con \texttt{cubicTo}, e infine il layer
+in foreground con le annotazioni.
+
+\begin{lstlisting}
+// Animazione per l'ingresso fluido gestita in un LaunchedEffect separato
+val animationProgress = remember { Animatable(0f) }
+LaunchedEffect(puntiVotiRelativi) {
+    animationProgress.animateTo(1f, animationSpec = tween(durationMillis = 1500))
+}
+
+Canvas(modifier = modifier) {
+    val progress = animationProgress.value
+    // ... calcolo margini e coordinate ...
+
+    // Area riempita con gradiente (Sfondo dell'andamento)
+    drawPath(
+        path = fillPath,
+        brush = Brush.verticalGradient(
+            colors = listOf(errorColor.copy(alpha = 0.2f * progress), Color.Transparent),
+            startY = pointsMedia.minOf { it.y },
+            endY = height - margin
+        )
+    )
+}
+\end{lstlisting}
+
+Questo approccio garantisce 60 FPS stabili durante l'animazione, poiché la recomposition
+non viene triggerata: la variazione di \texttt{animationProgress.value} invalida unicamente
+la fase di \textit{Draw} del ciclo di vita di Compose, by-passando le fasi di \textit{Composition}
+e \textit{Layout}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\textwidth]{statistiche_screen.png}
+    \caption{Schermata Statistiche (\texttt{StatisticheScreen}): scomposizione dei dati
+             accademici (alto) e rendering custom su \texttt{Canvas} dell'andamento voti
+             e media ponderata (basso), con legenda integrata.}
+    \label{fig:statistiche}
+\end{figure}
 
 \section{Gestione dello stato durante operazioni asincrone nella UI}
 
