@@ -421,17 +421,6 @@ NavigationSuiteScaffold(
 }
 \end{lstlisting}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.42\textwidth]{nav_phone.png}
-    \hfill
-    \includegraphics[width=0.52\textwidth]{nav_tablet.png}
-    \caption{\texttt{NavigationSuiteScaffold} in azione: Bottom Navigation Bar su
-             smartphone (sinistra) e Navigation Rail su tablet/finestra larga (destra).
-             Nessun codice condizionale --- il composable seleziona automaticamente
-             la modalità in base alle dimensioni della finestra.}
-    \label{fig:nav-adaptive}
-\end{figure}
 
 Tutti i ViewModel dell'applicazione utilizzano il pattern \texttt{ViewModelProvider.Factory}
 con dependency injection manuale: il composable ospitante recupera i repository dal
@@ -590,20 +579,30 @@ Le operazioni offline non devono andare perse quando la rete torna disponibile,
 anche se l'app è stata chiusa nel frattempo.
 
 \paragraph{Soluzione}
-Ogni \texttt{EsameEntity} in Room espone il campo \texttt{pendingSync: Boolean}
-(default \texttt{true}). Quando la rete è disponibile, la Request viene
-inviata immediatamente (add/update/delete tramite Retrofit) e
-\texttt{markSynced()} aggiorna \texttt{pending\_sync = 0} e salva il
-\texttt{remote\_id} assegnato dal server.
-Per il caso offline, \texttt{SyncExamsWorker} (un \texttt{CoroutineWorker})
-viene schedulato con \texttt{WorkManager.enqueueUniquePeriodicWork} con constraint
-\texttt{NetworkType.CONNECTED}: si esegue ogni ora ma solo quando la connessione
-è disponibile, anche a app chiusa. Il worker legge dalla DAO tutti i record con
-\texttt{pendingSync = true} e per ognuno chiama l'endpoint corretto: POST se
-\texttt{remoteId == null} (mai sincronizzato), PUT se \texttt{remoteId != null}
-(esame già esistente sul server, modificato offline). In caso di errore di rete
-restituisce \texttt{Result.retry()}: WorkManager riproverà automaticamente
-con backoff esponenziale.
+\texttt{EsameEntity} espone due flag di sincronizzazione:
+\texttt{pendingSync: Boolean} (default \texttt{true}) per add/update e
+\texttt{pendingDelete: Boolean} (default \texttt{false}) per i delete da ritentare.
+Quando la rete è disponibile, l'operazione viene inviata immediatamente tramite
+Retrofit; in caso di successo \texttt{markSynced()} azzera \texttt{pendingSync}
+e salva il \texttt{remoteId}. Se un DELETE fallisce per assenza di rete,
+\texttt{deleteEsame} chiama \texttt{markPendingDelete(id)}: l'esame è nascosto
+dalla UI (\texttt{getAllEsami} filtra \texttt{pending\_delete = 0}) ma rimane
+in Room per il retry. Analogamente, i record con \texttt{pendingSync = true}
+vengono esclusi dalla query \texttt{getPendingDeleteEsami}, e viceversa.
+
+\texttt{SyncExamsWorker} esegue in ordine: (1) retry dei DELETE pendenti ---
+se il server risponde 404 l'esame è già eliminato e viene rimosso localmente;
+(2) retry degli add/update pendenti con la stessa logica POST/PUT.
+Dopo ogni sync riuscito il worker aggiorna le statistiche di gamification e
+gli obiettivi. In caso di errori parziali restituisce \texttt{Result.retry()}
+per il backoff esponenziale di WorkManager.
+
+La sincronizzazione del catalogo esami in entrata (\texttt{refreshEsami}) usa
+una strategia \emph{last-write-wins} con priorità locale: gli esami modificati
+sul server vengono aggiornati in Room solo se la copia locale è già sincronizzata
+(\texttt{pendingSync = false}) e non è in attesa di eliminazione
+(\texttt{pendingDelete = false}). Se la copia locale è in modifica offline
+(\texttt{pendingSync = true}) la versione locale vince.
 
 \section{Notifiche di cambio rank con LeaderboardCheckWorker}
 
@@ -646,6 +645,54 @@ Il permesso \texttt{POST\_NOTIFICATIONS} viene richiesto all'avvio dell'app in
 Prima della richiesta viene mostrato un dialog di rationale che spiega
 perché la notifica è utile; l'utente può rifiutarla definitivamente e l'app
 rimane pienamente funzionale (la notifica è facoltativa).
+
+\section{Sincronizzazione dello stato di completamento degli obiettivi}
+
+\paragraph{Problema}
+Il backend espone due endpoint distinti per la gamification: \texttt{GET /gamification/badges}
+restituisce il catalogo completo degli obiettivi con i soli campi anagrafici
+(\texttt{id}, \texttt{nome}, \texttt{descrizione}, \texttt{xp\_valore}), senza alcun
+dato utente-specifico; \texttt{GET /gamification/my-badges} restituisce solo gli obiettivi
+effettivamente sbloccati dall'utente. Un'implementazione che interroghi unicamente il
+primo endpoint non è in grado di determinare quale obiettivo risulti completato:
+il campo \texttt{completato} è sempre assente dalla risposta del catalogo e Gson lo
+deserializza come \texttt{null}, rendendo ogni obiettivo permanentemente non completato
+nella UI anche dopo che il server ha assegnato i relativi punti XP.
+
+\paragraph{Soluzione}
+\texttt{ObiettivoRepositoryImpl.refreshObiettivi()} chiama entrambi gli endpoint in
+sequenza, costruisce un \texttt{Set<Int>} degli identificativi degli obiettivi sbloccati,
+quindi effettua il merge: per ogni voce del catalogo, \texttt{completato} viene impostato
+a \texttt{true} se e solo se il suo identificativo è presente nel set degli sbloccati.
+
+\begin{lstlisting}
+override suspend fun refreshObiettivi(): Result<Unit> = withContext(ioDispatcher) {
+    runCatching {
+        val allBadges = api.getBadges().body() ?: emptyList()
+        val myBadgesResponse = api.getMyBadges()
+        val completedIds: Set<Int> = if (myBadgesResponse.isSuccessful)
+            myBadgesResponse.body()?.map { it.safeId }?.toSet() ?: emptySet()
+        else emptySet()
+
+        val entities = allBadges.map { dto ->
+            ObiettivoEntity(
+                id = dto.safeId, nome = dto.nome,
+                descrizione = dto.descrizione,
+                completato = dto.safeId in completedIds,
+                premioXp = dto.xpValore
+            )
+        }
+        if (entities.isNotEmpty()) obiettivoDao.insertAll(entities)
+    }
+}
+\end{lstlisting}
+
+Il pattern è identico a quello adottato nel frontend web (Vue\,3 + Pinia), dove
+\texttt{Promise.all} esegue le due fetch in parallelo e la computed property
+\texttt{badgesWithUnlockStatus} effettua lo stesso controllo di appartenenza al set.
+Poiché \texttt{refreshObiettivi()} viene invocato da \texttt{LibrettoViewModel} dopo
+ogni operazione CRUD sugli esami, il Flow esposto da Room aggiorna automaticamente
+la UI degli obiettivi senza alcuna navigazione o refresh manuale.
 
 \section{Gestione dello stato durante operazioni asincrone nella UI}
 
@@ -734,10 +781,11 @@ rendere i test con coroutine deterministici e privi di \texttt{delay} artificial
     propagato automaticamente da Room tramite \texttt{Flow} fino al composable,
     senza polling né notifiche manuali.
 
-    \item \textbf{Strategia offline-first robusta}: il flag \texttt{pendingSync} e
-    il campo \texttt{updated\_at} garantiscono che nessuna operazione vada persa
-    anche in assenza prolungata di connessione. \texttt{SyncExamsWorker} garantisce
-    l'esecuzione differita anche con l'app chiusa.
+    \item \textbf{Strategia offline-first robusta}: i flag \texttt{pendingSync} e
+    \texttt{pendingDelete} su \texttt{EsameEntity} coprono l'intero ciclo di vita
+    CRUD anche senza connessione. Le eliminazioni fallite vengono nascoste dalla UI
+    (\texttt{getAllEsami} filtra \texttt{pending\_delete = 0}) e ritentate da
+    \texttt{SyncExamsWorker} al ritorno della rete, anche con l'app chiusa.
 
     \item \textbf{Token refresh trasparente}: \texttt{TokenAuthenticator} gestisce
     il rinnovo del JWT senza che nessun ViewModel o Use Case ne sia consapevole.
@@ -792,8 +840,9 @@ rendere i test con coroutine deterministici e privi di \texttt{delay} artificial
     \item \textbf{Accessibilità}: completare i \texttt{contentDescription} su tutti
     gli elementi interattivi dei composable per il supporto agli screen reader.
     \item \textbf{Indicizzazione Room}: aggiungere \texttt{@Index} sulle colonne
-    \texttt{remote\_id} e \texttt{pending\_sync} di \texttt{EsameEntity},
-    utilizzate frequentemente dal \texttt{SyncExamsWorker}.
+    \texttt{remote\_id}, \texttt{pending\_sync} e \texttt{pending\_delete} di
+    \texttt{EsameEntity}, utilizzate frequentemente dal \texttt{SyncExamsWorker}
+    per le query di filtering.
 \end{itemize}
 
 \section{Sviluppi Futuri}
