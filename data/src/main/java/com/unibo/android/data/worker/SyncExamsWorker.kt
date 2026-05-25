@@ -20,15 +20,24 @@ class SyncExamsWorker(
         val dao = db.esameDao()
         val api = NetworkClient.examApiService
         val formatter = DateTimeFormatter.ISO_LOCAL_DATE
-        val pending = dao.getUnsyncedEsami()
-
-        if (pending.isEmpty()) return Result.success()
-
         var hasError = false
         var syncCount = 0
 
-        pending.forEach { entity ->
-            // ... (logica di sync esistente)
+        // ── 1. Retry DELETE pendenti ──────────────────────────────────────────
+        dao.getPendingDeleteEsami().forEach { entity ->
+            val deleted = runCatching {
+                val response = api.deleteEsame(entity.remoteId!!)
+                when {
+                    response.isSuccessful -> { dao.deleteEsame(entity); true }
+                    response.code() == 404 -> { dao.deleteEsame(entity); true } // già eliminato sul server
+                    else -> false
+                }
+            }.getOrDefault(false)
+            if (deleted) syncCount++ else hasError = true
+        }
+
+        // ── 2. Sync add/update pendenti ───────────────────────────────────────
+        dao.getUnsyncedEsami().forEach { entity ->
             val request = ExamRequest(
                 nome = entity.nome,
                 voto = entity.voto,
@@ -41,14 +50,8 @@ class SyncExamsWorker(
                 runCatching {
                     val response = api.updateEsame(entity.remoteId, request)
                     when {
-                        response.isSuccessful -> {
-                            dao.markSynced(entity.id, entity.remoteId)
-                            true
-                        }
-                        response.code() == 404 -> {
-                            dao.updateEsame(entity.copy(remoteId = null))
-                            true
-                        }
+                        response.isSuccessful -> { dao.markSynced(entity.id, entity.remoteId); true }
+                        response.code() == 404 -> { dao.updateEsame(entity.copy(remoteId = null)); true }
                         else -> false
                     }
                 }.getOrDefault(false)
@@ -67,11 +70,10 @@ class SyncExamsWorker(
             if (synced) syncCount++ else hasError = true
         }
 
-        // Se abbiamo sincronizzato almeno un esame, forziamo il refresh della gamification
+        // ── 3. Refresh gamification se almeno una operazione riuscita ─────────
         if (syncCount > 0) {
             val gamificationRepo = GamificationRepositoryImpl(applicationContext)
             val obiettivoRepo = ObiettivoRepositoryImpl(db.obiettiviDao())
-            
             gamificationRepo.getUserStats()
             obiettivoRepo.refreshObiettivi()
         }

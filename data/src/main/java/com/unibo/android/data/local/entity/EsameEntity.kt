@@ -15,5 +15,7 @@ data class EsameEntity(
     @ColumnInfo(name = "cfu") val cfu: Int,
     @ColumnInfo(name = "data_esame") val dataEsame: LocalDate,
     @ColumnInfo(name = "remote_id") val remoteId: Int? = null,
-    @ColumnInfo(name = "pending_sync") val pendingSync: Boolean = true
+    @ColumnInfo(name = "pending_sync") val pendingSync: Boolean = true,
+    /** true = delete remoto pendente; l'esame è nascosto in UI ma ancora in Room per retry */
+    @ColumnInfo(name = "pending_delete") val pendingDelete: Boolean = false
 )

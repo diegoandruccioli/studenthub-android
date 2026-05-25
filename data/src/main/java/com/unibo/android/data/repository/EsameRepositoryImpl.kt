@@ -87,35 +87,38 @@ class EsameRepositoryImpl(context: Context) : EsameRepository {
     override suspend fun deleteEsame(esame: Esame): Result<Unit> = withContext(Dispatchers.IO) {
         val entity = dao.getById(esame.id) ?: return@withContext Result.success(Unit)
         if (entity.remoteId != null) {
-            runCatching {
-                val response = api.deleteEsame(entity.remoteId)
-                if (response.isSuccessful) {
-                    dao.deleteEsame(esame.toEntity())
-                    Unit
-                } else {
-                    throw Exception("Delete sync failed")
-                }
+            val response = runCatching { api.deleteEsame(entity.remoteId) }.getOrNull()
+            if (response?.isSuccessful == true) {
+                dao.deleteEsame(entity)
+            } else {
+                // Rete assente o errore server: marca per retry asincrono.
+                // L'esame è già nascosto dalla UI (getAllEsami esclude pending_delete=1).
+                dao.markPendingDelete(esame.id)
             }
         } else {
-            dao.deleteEsame(esame.toEntity())
-            Result.success(Unit)
+            // Esame mai sincronizzato con il server: eliminazione solo locale
+            dao.deleteEsame(entity)
         }
+        Result.success(Unit)
     }
 
     override suspend fun refreshEsami() {
         withContext(Dispatchers.IO) {
             runCatching {
                 val response = api.getEsami()
-                if (response.isSuccessful) {
-                    val pendingLocal = dao.getUnsyncedEsami()
-                    response.body()?.forEach { dto ->
-                        if (dao.getByRemoteId(dto.id) == null) {
-                            val remoteDate = LocalDate.parse(dto.data)
-                            val pendingMatch = pendingLocal.firstOrNull { pending ->
-                                pending.remoteId == null &&
-                                pending.nome == dto.nome &&
-                                pending.voto == dto.voto &&
-                                pending.dataEsame == remoteDate
+                if (!response.isSuccessful) return@runCatching
+                val pendingLocal = dao.getUnsyncedEsami()
+                response.body()?.forEach { dto ->
+                    val remoteDate = LocalDate.parse(dto.data)
+                    val existing = dao.getByRemoteId(dto.id)
+                    when {
+                        existing == null -> {
+                            // Esame presente sul server ma non in locale: inserimento
+                            val pendingMatch = pendingLocal.firstOrNull { p ->
+                                p.remoteId == null &&
+                                p.nome == dto.nome &&
+                                p.voto == dto.voto &&
+                                p.dataEsame == remoteDate
                             }
                             if (pendingMatch != null) {
                                 dao.markSynced(pendingMatch.id, dto.id)
@@ -133,6 +136,27 @@ class EsameRepositoryImpl(context: Context) : EsameRepository {
                                 )
                             }
                         }
+                        !existing.pendingSync && !existing.pendingDelete -> {
+                            // Esame già sincronizzato: aggiorna se il server ha dati più recenti
+                            val changed = existing.nome != dto.nome ||
+                                          existing.voto != dto.voto ||
+                                          existing.lode != dto.lode ||
+                                          existing.cfu != dto.cfu ||
+                                          existing.dataEsame != remoteDate
+                            if (changed) {
+                                dao.updateEsame(
+                                    existing.copy(
+                                        nome = dto.nome,
+                                        voto = dto.voto,
+                                        lode = dto.lode,
+                                        cfu = dto.cfu,
+                                        dataEsame = remoteDate
+                                    )
+                                )
+                            }
+                        }
+                        // existing.pendingSync == true → modifica locale in attesa: locale vince
+                        // existing.pendingDelete == true → marcato per eliminazione: ignora
                     }
                 }
             }

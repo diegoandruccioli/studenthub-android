@@ -13,7 +13,7 @@ import com.unibo.android.data.local.entity.EsameEntity
 import com.unibo.android.data.local.entity.LeaderboardEntity
 import com.unibo.android.data.local.entity.ObiettivoEntity
 
-@Database(entities = [EsameEntity::class, ObiettivoEntity::class, LeaderboardEntity::class], version = 11)
+@Database(entities = [EsameEntity::class, ObiettivoEntity::class, LeaderboardEntity::class], version = 12)
 @TypeConverters(Converters::class)
 abstract class StudentHubDatabase : RoomDatabase() {
 
