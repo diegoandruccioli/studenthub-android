@@ -69,6 +69,7 @@ fun LibrettoScreen(
     var esameToDelete by remember { mutableStateOf<Esame?>(null) }
 
     LaunchedEffect(Unit) {
+        viewModel.refreshEsami()
         gamificationViewModel.refreshStats()
     }
 

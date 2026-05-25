@@ -67,6 +67,10 @@ class LibrettoViewModel(
         viewModelScope.launch { refreshEsamiUseCase() }
     }
 
+    fun refreshEsami() {
+        viewModelScope.launch { refreshEsamiUseCase() }
+    }
+
     fun setSortBy(sortBy: SortBy) { _sortBy.value = sortBy }
 
     fun toggleSortOrder() {
