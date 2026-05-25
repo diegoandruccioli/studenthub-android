@@ -228,7 +228,7 @@ Il flusso reattivo dei dati procede in senso ascendente:
 Room DAO: Flow<List<EsameEntity>>
     --> RepositoryImpl: map + flowOn(Dispatchers.IO)
     --> UseCase: trasformazioni business
-    --> ViewModel: stateIn(viewModelScope, Eagerly) --> StateFlow<UiState>
+    --> ViewModel: stateIn(viewModelScope, Eagerly|WhileSubscribed) --> StateFlow<UiState>
     --> Composable: collectAsStateWithLifecycle()
 \end{verbatim}
 
@@ -355,7 +355,31 @@ val esami: StateFlow<List<Esame>> = combine(
 }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
 init { viewModelScope.launch { refreshEsamiUseCase() } }
+
+fun refreshEsami() {
+    viewModelScope.launch { refreshEsamiUseCase() }
+}
 \end{lstlisting}
+
+Il blocco \texttt{init} lancia un primo caricamento all'avvio del ViewModel.
+Per garantire la coerenza dei dati anche dopo reinstallazione o aggiornamento
+dell'app --- quando Room è vuota e il primo caricamento potrebbe essere stato
+silenziosamente interrotto da una race condition durante l'inizializzazione ---
+\texttt{LibrettoScreen} chiama esplicitamente \texttt{refreshEsami()} tramite
+\texttt{LaunchedEffect(Unit)}:
+
+\begin{lstlisting}
+LaunchedEffect(Unit) {
+    viewModel.refreshEsami()      // ri-fetch dal server al rientro in composizione
+    gamificationViewModel.refreshStats()
+}
+\end{lstlisting}
+
+Questo pattern --- identico a quello adottato in \texttt{ObiettiviScreen} ---
+garantisce che ogni volta che la schermata entra in composizione venga eseguita
+una chiamata server fresca. Room agisce da cache locale: se i dati sono già
+presenti la UI li mostra immediatamente, mentre la chiamata remota aggiorna
+eventualmente i dati in background.
 
 Con l'adozione di Jetpack Compose, la UI osserva il \texttt{StateFlow} tramite
 \texttt{collectAsStateWithLifecycle()}, che integra automaticamente la consapevolezza
@@ -505,71 +529,34 @@ l'operazione asincrona. Al termine, quando il DataStore emette \texttt{false},
 \texttt{RootNavigation} torna alla schermata di login automaticamente --- nessuna
 navigazione imperativa richiesta.
 
-\section{Persistenza del cookie JWT tra riavvii}
+\section{Persistenza e rinnovo automatico del cookie JWT}
 \label{sec:cookiejar}
 
 \paragraph{Problema}
-La prima implementazione di \texttt{CookieJar} manteneva i cookie esclusivamente
-in memoria. Ad ogni riavvio dell'applicazione, la cache veniva svuotata: l'utente
-trovava il flag \texttt{is\_logged\_in = true} su DataStore ma le chiamate API
-fallivan con 401 perché OkHttp non aveva più il cookie JWT da inviare. L'utente
-risultava quindi sloggato a ogni riavvio, nonostante avesse scelto di mantenere
-la sessione attiva.
+Il backend autentica le richieste tramite cookie HTTP-only: un access token
+(scadenza 15 minuti) e un refresh token (scadenza settimanale). Una
+\texttt{CookieJar} solo in memoria perde i cookie a ogni riavvio, forzando
+il login manuale. Alla scadenza dell'access token, senza gestione esplicita,
+tutte le chiamate API restituiscono 401.
 
 \paragraph{Soluzione}
-È stato sviluppato \texttt{PersistentCookieJar}, una implementazione di
-\texttt{CookieJar} che serializza i cookie su \texttt{SharedPreferences} tramite
-Gson e li ricarica in memoria all'inizializzazione. Le operazioni di lettura e
-scrittura sono annotate \texttt{@Synchronized} per prevenire race condition sui
-thread OkHttp. I cookie scaduti vengono filtrati in \texttt{loadForRequest}:
+Il problema è risolto con due componenti nel \texttt{NetworkClient}. Il primo è
+\texttt{PersistentCookieJar}: implementazione di \texttt{CookieJar} che serializza
+i cookie su \texttt{SharedPreferences} (Gson) e li ricarica all'inizializzazione;
+le operazioni sono \texttt{@Synchronized} per la thread-safety di OkHttp e i
+cookie scaduti vengono filtrati in \texttt{loadForRequest}. Al logout,
+\texttt{clearCookies()} azzera sia la cache in memoria sia le preferenze,
+impedendo il riutilizzo della sessione tra utenti diversi sullo stesso dispositivo.
 
-\begin{lstlisting}
-@Synchronized
-override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
-    val host = url.host
-    val current = cache.getOrPut(host) { mutableListOf() }
-    cookies.forEach { new ->
-        current.removeAll { it.name == new.name }
-        current.add(new)
-    }
-    prefs.edit().putString(host, serialize(current)).apply()
-}
-
-@Synchronized
-override fun loadForRequest(url: HttpUrl): List<Cookie> {
-    val now = System.currentTimeMillis()
-    return cache[url.host]
-        ?.filter { !it.persistent || it.expiresAt > now }
-        ?: emptyList()
-}
-\end{lstlisting}
-
-Al logout, \texttt{NetworkClient.clearCookies()} svuota sia la cache in memoria
-sia le \texttt{SharedPreferences}, impedendo che una sessione precedente possa
-essere riutilizzata da un utente diverso sullo stesso dispositivo.
-
-\section{Rinnovamento automatico del token JWT}
-
-\paragraph{Problema}
-Il backend emette un access token JWT con scadenza breve (15 minuti) e
-un refresh token con scadenza settimanale, entrambi in cookie HTTP-only.
-Senza gestione esplicita, alla scadenza dell'access token tutte le chiamate
-API cominciano a restituire 401, rendendo l'app inutilizzabile senza un
-logout e login manuali.
-
-\paragraph{Soluzione}
-È stato implementato un \texttt{Authenticator} OkHttp (\texttt{TokenAuthenticator})
-che intercetta automaticamente ogni risposta 401. L'authenticator esegue
-una chiamata sincrona a \texttt{POST /api/auth/refresh}: il \texttt{CookieJar}
-invia il refresh token già presente in memoria e riceve in risposta i cookie
-aggiornati, che vengono salvati automaticamente. OkHttp ritenta quindi la
-request originale --- ora autorizzata --- senza che il codice applicativo ne sia
-consapevole. Se il refresh fallisce (refresh token scaduto), l'authenticator
-invalida la sessione tramite \texttt{SessionDataStore.setLoggedIn(false)}:
-\texttt{RootNavigation} porta l'utente alla schermata di login in modo reattivo,
-senza alcuna navigazione imperativa. Una guardia blocca i loop di retry:
-se la request che ha fallito con 401 è già la \texttt{/auth/refresh},
-l'authenticator restituisce \texttt{null} immediatamente.
+Il secondo è \texttt{TokenAuthenticator}: \texttt{Authenticator} OkHttp che
+intercetta ogni risposta 401 ed esegue una chiamata sincrona a
+\texttt{POST /api/auth/refresh}. In caso di successo OkHttp ritenta la request
+originale in modo trasparente, senza che nessun ViewModel o Use Case gestisca
+logica di retry. Se il refresh fallisce, invalida la sessione tramite
+\texttt{SessionDataStore.setLoggedIn(false)}: \texttt{RootNavigation} reagisce
+reattivamente e porta l'utente al login, senza navigazione imperativa.
+Una guardia esplicita previene loop infiniti: se la request fallita è già
+\texttt{/auth/refresh}, l'authenticator restituisce \texttt{null} immediatamente.
 
 \section{Sincronizzazione offline-first con WorkManager}
 
@@ -607,51 +594,22 @@ sul server vengono aggiornati in Room solo se la copia locale è già sincronizz
 \section{Notifiche di cambio rank con LeaderboardCheckWorker}
 
 \paragraph{Problema}
-L'utente deve poter essere notificato quando la sua posizione in classifica migliora,
-senza tenere l'app aperta in foreground. La notifica richiede il permesso
-\texttt{POST\_NOTIFICATIONS} (introdotto in Android~13) che deve essere richiesto
-a runtime con una spiegazione contestuale. Il worker deve confrontare il rank
-corrente con quello precedente senza duplicare la logica di fetch già presente
-nel repository.
+L'utente deve ricevere una notifica quando la sua posizione in classifica migliora,
+senza tenere l'app aperta. La notifica richiede il permesso \texttt{POST\_NOTIFICATIONS}
+(Android~13+) da richiedere a runtime. Il worker deve confrontare il rank attuale
+con il precedente riutilizzando la logica di fetch già presente nel repository.
 
 \paragraph{Soluzione}
-\texttt{LeaderboardCheckWorker} estende \texttt{CoroutineWorker} e viene schedulato
-in \texttt{CustomApplication} ogni 15 minuti con constraint \texttt{CONNECTED}
-e policy \texttt{ExistingPeriodicWorkPolicy.KEEP} (nessuna schedulazione duplicata
-se già attiva).
-Il rank precedente è letto da \texttt{RankDataStore} prima della
-chiamata al server. A questo punto, \texttt{GamificationRepositoryImpl.getLeaderboard()}
-effettua il fetch della classifica e aggiorna \texttt{RankDataStore} come effetto collaterale
-tramite \texttt{saveMyRank()}. Il nuovo rank viene quindi riletto e confrontato, garantendo
-la totale separazione tra il fetch dei dati globali e il dato statistico puntuale:
-
-\begin{lstlisting}
-override suspend fun doWork(): Result {
-    return try {
-        val oldRank = rankDataStore.currentRank.firstOrNull()
-
-        // getLeaderboard() aggiorna currentRank in RankDataStore via saveMyRank()
-        val leaderboardResult = repository.getLeaderboard()
-
-        if (leaderboardResult.isSuccess) {
-            val newRank = rankDataStore.currentRank.firstOrNull()
-            if (oldRank != null && newRank != null && newRank < oldRank) {
-                showNotification("Rank Aggiornato!",
-                    "Sei salito in classifica! Ora sei al posto #$newRank")
-            }
-        }
-        Result.success()
-    } catch (e: Exception) {
-        Result.retry()
-    }
-}
-\end{lstlisting}
-
-Il permesso \texttt{POST\_NOTIFICATIONS} viene richiesto all'avvio dell'app in
-\texttt{ObiettiviScreen} tramite \texttt{rememberLauncherForActivityResult}.
-Prima della richiesta viene mostrato un dialog di rationale che spiega
-perché la notifica è utile; l'utente può rifiutarla definitivamente e l'app
-rimane pienamente funzionale (la notifica è facoltativa).
+\texttt{LeaderboardCheckWorker} (CoroutineWorker) è schedulato in
+\texttt{CustomApplication} ogni 15 minuti con constraint \texttt{CONNECTED}
+e policy \texttt{KEEP} (nessuna schedulazione duplicata). Prima del fetch, il rank
+corrente viene letto da \texttt{RankDataStore}; \texttt{GamificationRepositoryImpl.getLeaderboard()}
+aggiorna \texttt{RankDataStore} come effetto collaterale tramite \texttt{saveMyRank()}.
+Il nuovo rank viene riletto e confrontato: se migliorato, viene emessa la notifica.
+In caso di eccezione il worker restituisce \texttt{Result.retry()} per il backoff
+automatico di WorkManager. Il permesso \texttt{POST\_NOTIFICATIONS} è richiesto
+in \texttt{ObiettiviScreen} con un dialog di rationale; l'utente può rifiutarlo
+senza compromettere le funzionalità principali dell'app.
 
 \section{Sincronizzazione dello stato di completamento degli obiettivi}
 
@@ -886,11 +844,14 @@ rendere i test con coroutine deterministici e privi di \texttt{delay} artificial
     sulla stessa classe \texttt{Error} nella UI. Una gerarchia di errori distinta
     permetterebbe messaggi più precisi all'utente.
 
-    \item \textbf{\texttt{SharingStarted.Eagerly} su tutti i ViewModel}: adottato per
-    risolvere un bug di StateFlow stale con Room (upstream fermato da
-    \texttt{WhileSubscribed}), ma comporta che il Flow di Room rimanga sempre attivo
-    anche quando la schermata non è visibile. Il trade-off è accettabile per
-    il numero di ViewModel attuali.
+    \item \textbf{\texttt{SharingStarted.Eagerly} in \texttt{LibrettoViewModel}}:
+    solo \texttt{LibrettoViewModel} usa \texttt{Eagerly} --- scelta deliberata per
+    mantenere il Flow di Room sempre attivo e garantire la disponibilità immediata
+    della lista al rientro in composizione. Gli altri ViewModel
+    (\texttt{GamificationViewModel}, \texttt{StatisticheViewModel},
+    \texttt{ObiettiviViewModel}) adottano \texttt{WhileSubscribed(5000)}, che
+    sospende l'upstream dopo cinque secondi senza sottoscrittori, ottimizzando
+    le risorse. Il trade-off è accettabile per le dimensioni del progetto attuale.
 \end{itemize}
 
 % ── CAPITOLO 5 — MIGLIORIE E SVILUPPI FUTURI ────────────────
