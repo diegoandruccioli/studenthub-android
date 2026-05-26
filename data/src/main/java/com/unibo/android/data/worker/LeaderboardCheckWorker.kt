@@ -30,11 +30,18 @@ class LeaderboardCheckWorker(
             if (leaderboardResult.isSuccess) {
                 val newRank = rankDataStore.currentRank.firstOrNull()
 
-                if (oldRank != null && newRank != null && newRank < oldRank) {
-                    showNotification(
-                        "Rank Aggiornato!",
-                        "Sei salito in classifica! Ora sei al posto #$newRank"
-                    )
+                if (oldRank != null && newRank != null && newRank != oldRank) {
+                    if (newRank < oldRank) {
+                        showNotification(
+                            "Rank migliorato!",
+                            "Sei salito in classifica! Ora sei al posto #$newRank 🎉"
+                        )
+                    } else {
+                        showNotification(
+                            "Rank cambiato",
+                            "Sei sceso in classifica. Ora sei al posto #$newRank"
+                        )
+                    }
                 }
             }
             Result.success()

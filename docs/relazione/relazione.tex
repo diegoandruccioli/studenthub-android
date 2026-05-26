@@ -621,7 +621,11 @@ con il precedente riutilizzando la logica di fetch già presente nel repository.
 e policy \texttt{KEEP} (nessuna schedulazione duplicata). Prima del fetch, il rank
 corrente viene letto da \texttt{RankDataStore}; \texttt{GamificationRepositoryImpl.getLeaderboard()}
 aggiorna \texttt{RankDataStore} come effetto collaterale tramite \texttt{saveMyRank()}.
-Il nuovo rank viene riletto e confrontato: se migliorato, viene emessa la notifica.
+Il nuovo rank viene riletto e confrontato: se cambiato (in miglioramento o
+peggioramento), viene emessa una notifica con testo differenziato ---
+``Rank migliorato!'' con indicazione della nuova posizione se
+\texttt{newRank < oldRank}, ``Rank cambiato'' con la nuova posizione se
+\texttt{newRank > oldRank}.
 In caso di eccezione il worker restituisce \texttt{Result.retry()} per il backoff
 automatico di WorkManager. Il permesso \texttt{POST\_NOTIFICATIONS} è richiesto
 in \texttt{ObiettiviScreen} con un dialog di rationale; l'utente può rifiutarlo
