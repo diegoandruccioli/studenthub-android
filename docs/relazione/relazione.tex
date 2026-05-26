@@ -354,19 +354,30 @@ val esami: StateFlow<List<Esame>> = combine(
     if (order == SortOrder.DESC) sorted.reversed() else sorted
 }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-init { viewModelScope.launch { refreshEsamiUseCase() } }
+init {
+    // Carica le impostazioni dal server al login/reinstall: popola il DataStore
+    // in modo che observeSettingsUseCase() emetta subito i valori reali
+    // dell'account corrente (es. tema RGB) senza aspettare la schermata Profilo.
+    viewModelScope.launch { getSettingsUseCase() }
+}
 
 fun refreshEsami() {
     viewModelScope.launch { refreshEsamiUseCase() }
 }
 \end{lstlisting}
 
-Il blocco \texttt{init} lancia un primo caricamento all'avvio del ViewModel.
-Per garantire la coerenza dei dati anche dopo reinstallazione o aggiornamento
-dell'app --- quando Room è vuota e il primo caricamento potrebbe essere stato
-silenziosamente interrotto da una race condition durante l'inizializzazione ---
-\texttt{LibrettoScreen} chiama esplicitamente \texttt{refreshEsami()} tramite
-\texttt{LaunchedEffect(Unit)}:
+Il blocco \texttt{init} non lancia più il caricamento degli esami: quel compito
+è delegato alla schermata tramite \texttt{LaunchedEffect(Unit)}, evitando
+una doppia chiamata concorrente a \texttt{GET /exams} che poteva causare
+una race condition nel pattern \emph{check-then-insert} di \texttt{refreshEsami}.
+Il blocco \texttt{init} esegue invece \texttt{getSettingsUseCase()}: al momento
+del login (o dopo reinstallazione) il \texttt{SettingsDataStore} è vuoto ---
+perché azzerato esplicitamente al logout tramite \texttt{SettingsDataStore.clear()} ---
+e senza questa chiamata le impostazioni dell'account (es.\ il tema RGB per i colori dei
+voti) verrebbero applicate solo dopo la prima visita alla schermata Profilo.
+
+Il caricamento degli esami avviene invece via \texttt{LaunchedEffect(Unit)} in
+\texttt{LibrettoScreen}:
 
 \begin{lstlisting}
 LaunchedEffect(Unit) {
@@ -520,9 +531,14 @@ senza alcuna chiamata esplicita alla navigazione.
 
 Il logout è implementato con lo stesso pattern dichiarativo. \texttt{LogoutUseCase}
 chiama \texttt{POST /api/auth/logout} avvolto in \texttt{runCatching}: anche se
-il backend non è raggiungibile, la sessione locale viene comunque invalidata
-(\texttt{NetworkClient.clearCookies()} + \texttt{setLoggedIn(false)}). Il logout locale
-è quindi garantito indipendentemente dalla disponibilità della rete.
+il backend non è raggiungibile, la sessione locale viene comunque invalidata.
+In particolare \texttt{AuthRepositoryImpl.logout()} esegue in sequenza:
+\texttt{NetworkClient.clearCookies()} (revoca cookie JWT), \texttt{db.clearAllTables()}
+(azzera Room: esami, obiettivi, leaderboard), \texttt{RankDataStore.clear()} (azzera
+XP/rank/livello), \texttt{SettingsDataStore.clear()} (azzera le impostazioni cached) e
+\texttt{setLoggedIn(false)} (reindirizza alla login). Questo garantisce l'isolamento
+completo dei dati tra account diversi sullo stesso dispositivo: al successivo login,
+nessun dato dell'utente precedente sopravvive in locale.
 \texttt{ProfiloViewModel} espone \texttt{isLoggingOut: StateFlow<Boolean>} per
 disabilitare il pulsante e mostrare un indicatore di caricamento durante
 l'operazione asincrona. Al termine, quando il DataStore emette \texttt{false},
@@ -790,6 +806,179 @@ dipendenze fittizie. Sono stati scritti 29 test unitari suddivisi in cinque suit
 
 \texttt{UnconfinedTestDispatcher} sostituisce \texttt{Dispatchers.Default} per
 rendere i test con coroutine deterministici e privi di \texttt{delay} artificiali.
+
+\section{Deserializzazione della data esame dal backend}
+
+\paragraph{Problema}
+Il campo \texttt{data} restituito dall'endpoint \texttt{GET /api/exams} non è una stringa
+\texttt{DATE} pura (\texttt{"2026-05-25"}) ma una stringa ISO~8601 completa
+(\texttt{"2026-05-25T00:00:00.000Z"}), prodotta dalla libreria \texttt{mysql2} di Node.js
+quando la colonna MySQL è di tipo \texttt{DATE} e l'opzione \texttt{dateStrings: true}
+non è attiva. La chiamata \texttt{LocalDate.parse(dto.data)} di Java Time solleva una
+\texttt{DateTimeParseException} perché il formatter predefinito si aspetta esattamente
+dieci caratteri nel formato \texttt{yyyy-MM-dd}. L'eccezione era inghiottita da un
+\texttt{runCatching} in \texttt{refreshEsami()}: Room restava vuota senza alcun messaggio
+di errore visibile, rendendo il bug particolarmente difficile da diagnosticare.
+
+\paragraph{Soluzione}
+Poiché il backend non è modificabile, la correzione è applicata lato Android:
+
+\begin{lstlisting}
+val remoteDate = LocalDate.parse(dto.data.take(10))
+\end{lstlisting}
+
+\texttt{String.take(10)} estrae i primi dieci caratteri (\texttt{"2026-05-25"})
+prima del parsing, eliminando il suffisso temporale indipendentemente dal formato
+esatto prodotto dal backend. L'operazione è sicura anche nel caso in cui il backend
+venisse corretto in futuro e tornasse a inviare solo la data: \texttt{take(10)} su
+una stringa di dieci caratteri restituisce la stringa invariata.
+
+\section{Allineamento dei valori ENUM tema\_voti tra Android e MySQL}
+
+\paragraph{Problema}
+La colonna \texttt{tema\_voti} nel database MySQL è definita come
+\texttt{ENUM('DEFAULT', 'RGB')}. L'app Android inviava i valori \texttt{"STANDARD"} e
+\texttt{"LODE"} non presenti nell'ENUM: MySQL in strict mode rifiuta l'inserimento con
+un errore~500, che compariva in UI come \emph{"salvataggio impostazioni fallito"}.
+Parallelamente, la strategia di aggiornamento era difettosa: \texttt{updateSettings()}
+inviava prima la richiesta al server e aggiornava il DataStore solo in caso di successo.
+Ciò significava che un errore di rete transitorio annullava la preferenza locale
+dell'utente, anche se l'app funzionava correttamente offline.
+
+\paragraph{Soluzione}
+Sono stati applicati due interventi distinti. Il primo allinea i valori inviati
+all'ENUM del backend: i valori selezionabili nella \texttt{ProfiloScreen} sono
+ora \texttt{"DEFAULT"} e \texttt{"RGB"}; la voce \texttt{"LODE"} è rimossa dal
+dropdown e dai valori di fallback in tutti i ViewModel e nei test.
+Il secondo corregge la strategia di persistenza in \texttt{SettingsRepositoryImpl}:
+il DataStore viene aggiornato \emph{prima} della chiamata API; la chiamata al server
+è effettuata in un \texttt{runCatching} separato il cui esito viene ignorato.
+In questo modo l'utente vede immediatamente il risultato del salvataggio locale,
+e la sincronizzazione remota avviene in modo best-effort senza bloccare l'operazione.
+Questa strategia rispecchia il principio offline-first già adottato per il libretto esami.
+
+\section{Deserializzazione del campo \texttt{lode} dal backend}
+
+\paragraph{Problema}
+MySQL memorizza il campo \texttt{lode} come \texttt{TINYINT(1)}. La libreria Node.js
+\texttt{mysql2} serializza questo tipo come numero intero (\texttt{0} o \texttt{1})
+anziché come valore booleano JSON (\texttt{false}/\texttt{true}). Il DTO Android
+\texttt{ExamDto.lode} era dichiarato come \texttt{Boolean}: Gson lancia una
+\texttt{IllegalStateException} (\emph{``Expected a boolean but was NUMBER''}) durante
+la deserializzazione di ogni esame. L'eccezione veniva inghiottita silenziosamente
+dal blocco \texttt{runCatching} in \texttt{refreshEsami()}, impedendo
+completamente il popolamento di Room con i dati del server --- lo stesso punto
+di fallimento del bug sulla data ISO~8601, ma con una causa diversa.
+
+\paragraph{Soluzione}
+Il tipo del campo \texttt{lode} in \texttt{ExamDto} è stato modificato da \texttt{Boolean}
+a \texttt{Int}. Nei punti del codice in cui il DTO viene mappato a \texttt{EsameEntity}
+(inserimento e aggiornamento in \texttt{refreshEsami()}), la conversione esplicita
+\texttt{dto.lode != 0} produce il valore booleano atteso. \texttt{ExamRequest.lode}
+rimane \texttt{Boolean}: Gson lo serializza correttamente come \texttt{true}/\texttt{false}
+e lo schema Zod del backend accetta valori booleani in ingresso.
+
+\section{Visibilità degli errori silenti nel layer di rete}
+
+\paragraph{Problema}
+Il layer dati conteneva circa dieci blocchi \texttt{runCatching} che inghiottivano
+ogni eccezione senza alcun log. Tre bug distinti (data ISO~8601, ENUM tema\_voti,
+lode TINYINT) erano rimasti latenti per settimane perché nessun messaggio di errore
+appariva nel Logcat. La diagnosi richiedeva di collegare un debugger e impostare
+breakpoint manualmente, rendendo il ciclo di debug molto lento.
+
+\paragraph{Soluzione}
+Aggiunto \texttt{.onFailure \{ e -> Log.e(TAG, "...", e) \}} a ogni blocco
+\texttt{runCatching} critico nei repository (\texttt{EsameRepositoryImpl},
+\texttt{ObiettivoRepositoryImpl}, \texttt{SettingsRepositoryImpl}). Il tag
+per ogni repository è una costante \texttt{private const val TAG} dedicata:
+filtrare il Logcat per \texttt{EsameRepository}, \texttt{ObiettivoRepository}
+o \texttt{SettingsRepository} mostra immediatamente ogni chiamata API con
+il suo esito. Per il traffico HTTP raw (header, body, status code) è già
+attivo \texttt{HttpLoggingInterceptor.Level.BODY} in \texttt{NetworkClient}:
+filtrare per tag \texttt{OkHttp} nel Logcat espone l'intera comunicazione
+con il server senza alcuna modifica al codice.
+
+\section{Risposta HTTP non vuota su endpoint che non restituiscono dati}
+
+\paragraph{Problema}
+Due endpoint del backend --- \texttt{DELETE /exams/:id} e \texttt{POST /auth/logout}
+--- rispondono con un corpo JSON di conferma (\texttt{\{"message":"..."\}}) anziché
+un corpo vuoto. In Retrofit~2, dichiarare il tipo di ritorno come
+\texttt{Response<Unit>} fa sì che il convertitore Gson tenti di deserializzare
+quel corpo come \texttt{Unit}; su corpi non vuoti questo produce un'eccezione a
+runtime.
+
+Per il DELETE l'impatto era funzionale: il blocco \texttt{runCatching} in
+\texttt{EsameRepositoryImpl.deleteEsame()} catturava l'eccezione, restituiva
+\texttt{null} e il controllo \texttt{response?.isSuccessful == true} risultava
+\texttt{false}. L'app chiamava \texttt{markPendingDelete} invece di
+\texttt{deleteEsame}, lasciando l'entità in Room con \texttt{pendingDelete = true}
+anche se il server aveva già eliminato l'esame con successo. L'esame spariva
+dalla UI (filtro \texttt{pending\_delete = 0}), ma \texttt{SyncExamsWorker}
+doveva eseguire un ciclo di retry in più prima di rimuoverlo definitivamente da Room.
+
+Per il logout l'impatto era nullo dal punto di vista dell'utente: l'eccezione
+veniva comunque inghiottita da \texttt{runCatching} e il codice successivo
+(\texttt{clearCookies}, \texttt{clearAllTables}, \texttt{setLoggedIn(false)})
+veniva eseguito regolarmente. Tuttavia la chiamata \texttt{POST /auth/logout}
+non veniva completata correttamente lato OkHttp (connessione non rilasciata).
+
+\paragraph{Soluzione}
+Entrambi i metodi sono stati cambiati da \texttt{Response<Unit>} a
+\texttt{Response<ResponseBody>}, in analogia con quanto già adottato per
+\texttt{SettingsApiService.updateSettings()}. Il corpo viene chiuso
+esplicitamente con \texttt{body()?.close()} per rilasciare la connessione
+OkHttp; nessun campo del corpo viene letto poiché non è necessario.
+
+\begin{lstlisting}
+// AuthApiService.kt
+@POST("auth/logout")
+suspend fun logout(): Response<ResponseBody>
+
+// ExamApiService.kt
+@DELETE("exams/{id}")
+suspend fun deleteEsame(@Path("id") id: Int): Response<ResponseBody>
+
+// AuthRepositoryImpl.kt
+runCatching { apiService.logout() }.getOrNull()?.body()?.close()
+
+// EsameRepositoryImpl.kt
+if (response?.isSuccessful == true) {
+    response.body()?.close()
+    dao.deleteEsame(entity)
+}
+\end{lstlisting}
+
+\section{Allineamento dei nomi di campo nelle risposte di aggiunta e modifica esame}
+
+\paragraph{Problema}
+Le risposte JSON del backend per \texttt{POST /exams} e \texttt{PUT /exams/:id}
+usano la convenzione \textit{snake\_case} per i campi opzionali
+(\texttt{xp\_totali\_guadagnati}, \texttt{nuovi\_badge}, \texttt{badge\_revocati},
+\texttt{xp\_difference}), mentre i corrispondenti data class Kotlin
+(\texttt{AddExamResponse}, \texttt{UpdateExamResponse}) usavano i nomi
+camelCase senza annotazioni \texttt{@SerializedName}.
+Gson non trovava corrispondenza e popolava sempre quei campi con \texttt{null},
+impedendo a potenziali consumatori futuri di leggere i dati restituiti dal server.
+
+\paragraph{Soluzione}
+Aggiunte le annotazioni \texttt{@SerializedName} ai campi coinvolti, allineando
+la deserializzazione Gson al contratto del backend:
+
+\begin{lstlisting}
+data class AddExamResponse(
+    val ids: List<Int>,
+    @SerializedName("xp_totali_guadagnati") val totalXp: Int?,
+    @SerializedName("nuovi_badge") val newBadges: List<Any>?
+)
+
+data class UpdateExamResponse(
+    @SerializedName("nuovi_badge") val newBadges: List<Any>?,
+    @SerializedName("badge_revocati") val revokedBadgeIds: List<Any>?,
+    @SerializedName("xp_difference") val xpDifference: Int?
+)
+\end{lstlisting}
 
 % ── CAPITOLO 4 — PUNTI FORTI E PUNTI DEBOLI ─────────────────
 \chapter{Punti Forti e Punti Deboli}
