@@ -48,7 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.unibo.android.domain.model.Settings
 import com.unibo.android.ui.R
 
-private val TEMI = listOf("STANDARD", "LODE", "RGB")
+private val TEMI = listOf("DEFAULT", "RGB")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,7 +91,7 @@ fun ProfiloScreen(
             }
             is ProfiloUiState.Error -> {
                 ProfiloContent(
-                    settings = state.settings ?: Settings("STANDARD", 18, 30),
+                    settings = state.settings ?: Settings("DEFAULT", 18, 27),
                     isLoggingOut = isLoggingOut,
                     isSaving = false,
                     onSave = { viewModel.saveSettings(it) },
@@ -176,7 +176,6 @@ private fun ProfiloContent(
                 ) {
                     OutlinedTextField(
                         value = when (selectedTema) {
-                            "LODE" -> stringResource(R.string.profilo_tema_lode)
                             "RGB" -> stringResource(R.string.profilo_tema_rgb)
                             else -> stringResource(R.string.profilo_tema_standard)
                         },
@@ -195,11 +194,7 @@ private fun ProfiloContent(
                     ) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.profilo_tema_standard)) },
-                            onClick = { selectedTema = "STANDARD"; temaExpanded = false }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.profilo_tema_lode)) },
-                            onClick = { selectedTema = "LODE"; temaExpanded = false }
+                            onClick = { selectedTema = "DEFAULT"; temaExpanded = false }
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.profilo_tema_rgb)) },

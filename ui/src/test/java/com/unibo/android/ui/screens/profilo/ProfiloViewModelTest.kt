@@ -39,7 +39,7 @@ class ProfiloViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private val defaultSettings = Settings("STANDARD", 18, 30)
+    private val defaultSettings = Settings("DEFAULT", 18, 27)
 
     @Test
     fun `init - carica settings e passa a Success`() = runTest {
