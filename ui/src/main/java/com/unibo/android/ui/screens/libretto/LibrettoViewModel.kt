@@ -12,6 +12,7 @@ import com.unibo.android.domain.repository.SettingsRepository
 import com.unibo.android.domain.usecase.AddEsameUseCase
 import com.unibo.android.domain.usecase.DeleteEsameUseCase
 import com.unibo.android.domain.usecase.GetEsamiUseCase
+import com.unibo.android.domain.usecase.GetSettingsUseCase
 import com.unibo.android.domain.usecase.ObserveSettingsUseCase
 import com.unibo.android.domain.usecase.RefreshEsamiUseCase
 import com.unibo.android.domain.usecase.RefreshObiettiviUseCase
@@ -38,6 +39,7 @@ class LibrettoViewModel(
     private val refreshUserStatsUseCase: RefreshUserStatsUseCase,
     private val refreshObiettiviUseCase: RefreshObiettiviUseCase,
     private val observeSettingsUseCase: ObserveSettingsUseCase,
+    private val getSettingsUseCase: GetSettingsUseCase,
 ) : ViewModel() {
 
     private val _sortBy = MutableStateFlow(SortBy.DATA)
@@ -61,10 +63,13 @@ class LibrettoViewModel(
 
     val settings: StateFlow<Settings> = observeSettingsUseCase()
         .filterNotNull()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, Settings("STANDARD", 18, 30))
+        .stateIn(viewModelScope, SharingStarted.Eagerly, Settings("DEFAULT", 18, 27))
 
     init {
-        viewModelScope.launch { refreshEsamiUseCase() }
+        // Carica settings dal server al login/reinstall: popola DataStore in modo che
+        // observeSettingsUseCase() emetta subito i valori reali dell'account corrente.
+        // refreshEsami NON è qui: viene invocato da LibrettoScreen.LaunchedEffect(Unit).
+        viewModelScope.launch { getSettingsUseCase() }
     }
 
     fun refreshEsami() {
@@ -125,6 +130,7 @@ class LibrettoViewModel(
                 refreshUserStatsUseCase = RefreshUserStatsUseCase(gamificationRepository),
                 refreshObiettiviUseCase = RefreshObiettiviUseCase(obiettivoRepository),
                 observeSettingsUseCase = ObserveSettingsUseCase(settingsRepository),
+                getSettingsUseCase = GetSettingsUseCase(settingsRepository),
             ) as T
         }
     }

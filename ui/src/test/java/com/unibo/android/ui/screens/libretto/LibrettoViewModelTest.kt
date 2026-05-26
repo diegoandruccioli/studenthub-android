@@ -5,6 +5,7 @@ import com.unibo.android.domain.model.Settings
 import com.unibo.android.domain.usecase.AddEsameUseCase
 import com.unibo.android.domain.usecase.DeleteEsameUseCase
 import com.unibo.android.domain.usecase.GetEsamiUseCase
+import com.unibo.android.domain.usecase.GetSettingsUseCase
 import com.unibo.android.domain.usecase.ObserveSettingsUseCase
 import com.unibo.android.domain.usecase.RefreshEsamiUseCase
 import com.unibo.android.domain.usecase.RefreshObiettiviUseCase
@@ -41,6 +42,7 @@ class LibrettoViewModelTest {
     private val refreshUserStats: RefreshUserStatsUseCase = mock()
     private val refreshObiettivi: RefreshObiettiviUseCase = mock()
     private val observeSettings: ObserveSettingsUseCase = mock()
+    private val getSettings: GetSettingsUseCase = mock()
 
     @Before
     fun setup() {
@@ -54,7 +56,9 @@ class LibrettoViewModelTest {
 
     private fun makeVm(): LibrettoViewModel {
         whenever(getEsami()).thenReturn(flowOf(esami))
-        whenever(observeSettings()).thenReturn(flowOf(Settings("STANDARD", 18, 30)))
+        whenever(observeSettings()).thenReturn(flowOf(Settings("DEFAULT", 18, 27)))
+        // getSettings è suspend: il mock restituisce null di default; il return value
+        // è ignorato nell'init (fire-and-forget su viewModelScope.launch) → nessuno stub necessario.
         return LibrettoViewModel(
             getEsamiUseCase = getEsami,
             addEsameUseCase = addEsame,
@@ -64,6 +68,7 @@ class LibrettoViewModelTest {
             refreshUserStatsUseCase = refreshUserStats,
             refreshObiettiviUseCase = refreshObiettivi,
             observeSettingsUseCase = observeSettings,
+            getSettingsUseCase = getSettings,
         )
     }
 
