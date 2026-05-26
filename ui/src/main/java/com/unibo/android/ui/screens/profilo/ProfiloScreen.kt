@@ -60,6 +60,10 @@ fun ProfiloScreen(
     val isLoggingOut by viewModel.isLoggingOut.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Ricarica settings dal server ogni volta che la schermata entra in composizione,
+    // così le modifiche fatte sul web vengono recepite senza bisogno di logout/restart.
+    LaunchedEffect(Unit) { viewModel.loadSettings() }
+
     LaunchedEffect(uiState) {
         if (uiState is ProfiloUiState.Error) {
             snackbarHostState.showSnackbar((uiState as ProfiloUiState.Error).message)

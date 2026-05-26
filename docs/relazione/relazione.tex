@@ -980,6 +980,41 @@ data class UpdateExamResponse(
 )
 \end{lstlisting}
 
+\section{Sincronizzazione unidirezionale delle impostazioni utente}
+
+\paragraph{Problema}
+Le impostazioni utente (tema voti, soglie RGB) erano sincronizzate correttamente
+nella direzione mobile~$\rightarrow$~web: la funzione \texttt{saveSettings()} invocava
+\texttt{updateSettingsUseCase()}, che aggiornava il DataStore locale e chiamava
+\texttt{PUT /settings} sul backend.
+La direzione opposta, web~$\rightarrow$~mobile, era però interrotta:
+\texttt{getSettingsUseCase()} veniva chiamato una sola volta al momento della
+creazione del \texttt{ProfiloViewModel} (nel blocco \texttt{init~\{\}}), e
+\texttt{observeSettingsUseCase()} osservava esclusivamente il DataStore locale.
+Di conseguenza, qualsiasi modifica effettuata tramite l'interfaccia web non veniva
+mai recepita sull'app mobile finché l'utente non eseguiva logout e ri-login,
+oppure non forzava la chiusura dell'app.
+
+\paragraph{Soluzione}
+Il pattern già adottato in \texttt{LibrettoScreen} — un \texttt{LaunchedEffect(Unit)}
+che recupera i dati dal server ad ogni ingresso nella schermata — è stato applicato
+anche a \texttt{ProfiloScreen}.
+Ogni volta che l'utente naviga alla schermata Profilo, il blocco esegue
+\texttt{viewModel.loadSettings()}, che interroga il backend e aggiorna il DataStore;
+\texttt{observeSettingsUseCase()} reagisce automaticamente all'aggiornamento e la
+UI mostra i valori più recenti.
+
+\begin{lstlisting}
+// ProfiloScreen.kt
+LaunchedEffect(Unit) { viewModel.loadSettings() }
+\end{lstlisting}
+
+La chiamata è idempotente e ha un costo trascurabile: il backend restituisce un
+payload JSON minimo e il DataStore viene aggiornato solo se i valori sono cambiati.
+Il \texttt{loadSettings()} nell'\texttt{init~\{\}} del ViewModel è stato mantenuto
+per garantire il caricamento immediato alla prima apertura dell'app, prima che
+la composizione della schermata raggiunga il \texttt{LaunchedEffect}.
+
 % ── CAPITOLO 4 — PUNTI FORTI E PUNTI DEBOLI ─────────────────
 \chapter{Punti Forti e Punti Deboli}
 
