@@ -52,19 +52,28 @@ class LeaderboardCheckWorker(
 
     private fun showNotification(title: String, message: String) {
         val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channelId = "gamification_channel"
+        val channelId = "gamification_rank_updates"
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, "Gamification", NotificationManager.IMPORTANCE_DEFAULT)
+            val channel = NotificationChannel(
+                channelId, 
+                "Aggiornamenti Classifica", 
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notifiche relative ai cambiamenti di posizione in classifica"
+                enableLights(true)
+                enableVibration(true)
+            }
             manager.createNotificationChannel(channel)
         }
         
         val notification = NotificationCompat.Builder(applicationContext, channelId)
-            // L'icona andrebbe impostata a una esistente, usiamo un placeholder standard o mipmap/ic_launcher
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(message)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
             .build()
             
         manager.notify(System.currentTimeMillis().toInt(), notification)
