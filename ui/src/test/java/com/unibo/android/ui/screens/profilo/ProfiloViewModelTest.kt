@@ -28,10 +28,13 @@ class ProfiloViewModelTest {
     private val getSettings: GetSettingsUseCase = mock()
     private val updateSettings: UpdateSettingsUseCase = mock()
     private val logout: LogoutUseCase = mock()
+    private val settingsRepository: com.unibo.android.domain.repository.SettingsRepository = mock()
 
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
+        whenever(settingsRepository.observeLastCheckTimestamp()).thenReturn(kotlinx.coroutines.flow.flowOf(0L))
+        whenever(settingsRepository.observeLocalRank()).thenReturn(kotlinx.coroutines.flow.flowOf(0))
     }
 
     @After
@@ -45,7 +48,7 @@ class ProfiloViewModelTest {
     fun `init - carica settings e passa a Success`() = runTest {
         whenever(getSettings()).thenReturn(Result.success(defaultSettings))
 
-        val vm = ProfiloViewModel(getSettings, updateSettings, logout)
+        val vm = ProfiloViewModel(getSettings, updateSettings, logout, settingsRepository)
         advanceUntilIdle()
 
         val state = vm.uiState.value
@@ -57,7 +60,7 @@ class ProfiloViewModelTest {
     fun `init - errore API passa a Error`() = runTest {
         whenever(getSettings()).thenReturn(Result.failure(Exception("Network error")))
 
-        val vm = ProfiloViewModel(getSettings, updateSettings, logout)
+        val vm = ProfiloViewModel(getSettings, updateSettings, logout, settingsRepository)
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value is ProfiloUiState.Error)
@@ -68,7 +71,7 @@ class ProfiloViewModelTest {
         whenever(getSettings()).thenReturn(Result.success(defaultSettings))
         whenever(updateSettings(defaultSettings)).thenReturn(Result.success(Unit))
 
-        val vm = ProfiloViewModel(getSettings, updateSettings, logout)
+        val vm = ProfiloViewModel(getSettings, updateSettings, logout, settingsRepository)
         advanceUntilIdle()
 
         vm.saveSettings(defaultSettings)
@@ -86,7 +89,7 @@ class ProfiloViewModelTest {
         whenever(updateSettings(defaultSettings))
             .thenReturn(Result.failure(Exception("Salvataggio fallito")))
 
-        val vm = ProfiloViewModel(getSettings, updateSettings, logout)
+        val vm = ProfiloViewModel(getSettings, updateSettings, logout, settingsRepository)
         advanceUntilIdle()
         vm.saveSettings(defaultSettings)
         advanceUntilIdle()
@@ -101,7 +104,7 @@ class ProfiloViewModelTest {
         whenever(getSettings()).thenReturn(Result.success(defaultSettings))
         whenever(logout()).thenReturn(Result.success(Unit))
 
-        val vm = ProfiloViewModel(getSettings, updateSettings, logout)
+        val vm = ProfiloViewModel(getSettings, updateSettings, logout, settingsRepository)
         advanceUntilIdle()
 
         assertFalse(vm.isLoggingOut.value)

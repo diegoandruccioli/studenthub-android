@@ -10,6 +10,7 @@ import com.unibo.android.domain.usecase.ObserveSettingsUseCase
 import com.unibo.android.domain.usecase.RefreshEsamiUseCase
 import com.unibo.android.domain.usecase.RefreshObiettiviUseCase
 import com.unibo.android.domain.usecase.RefreshUserStatsUseCase
+import com.unibo.android.domain.usecase.RunLeaderboardCheckUseCase
 import com.unibo.android.domain.usecase.UpdateEsameUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -43,6 +44,7 @@ class LibrettoViewModelTest {
     private val refreshObiettivi: RefreshObiettiviUseCase = mock()
     private val observeSettings: ObserveSettingsUseCase = mock()
     private val getSettings: GetSettingsUseCase = mock()
+    private val runLeaderboardCheck: RunLeaderboardCheckUseCase = mock()
 
     @Before
     fun setup() {
@@ -69,6 +71,7 @@ class LibrettoViewModelTest {
             refreshObiettiviUseCase = refreshObiettivi,
             observeSettingsUseCase = observeSettings,
             getSettingsUseCase = getSettings,
+            runLeaderboardCheckUseCase = runLeaderboardCheck,
         )
     }
 
@@ -132,6 +135,7 @@ class LibrettoViewModelTest {
     @Test
     fun `addEsame - chiama refreshUserStats e refreshObiettivi dopo aggiunta`() = runTest {
         whenever(addEsame(esame1)).thenReturn(Result.success(Unit))
+        whenever(runLeaderboardCheck()).thenReturn(Result.success(Unit))
         val vm = makeVm()
         advanceUntilIdle()
 
@@ -141,11 +145,13 @@ class LibrettoViewModelTest {
         verify(addEsame)(esame1)
         verify(refreshUserStats)()
         verify(refreshObiettivi)()
+        verify(runLeaderboardCheck)()
     }
 
     @Test
     fun `deleteEsame - chiama refreshUserStats e refreshObiettivi dopo eliminazione`() = runTest {
         whenever(deleteEsame(esame1)).thenReturn(Result.success(Unit))
+        whenever(runLeaderboardCheck()).thenReturn(Result.success(Unit))
         val vm = makeVm()
         advanceUntilIdle()
 
@@ -155,11 +161,13 @@ class LibrettoViewModelTest {
         verify(deleteEsame)(esame1)
         verify(refreshUserStats)()
         verify(refreshObiettivi)()
+        verify(runLeaderboardCheck)()
     }
 
     @Test
     fun `updateEsame - chiama refreshUserStats e refreshObiettivi dopo aggiornamento`() = runTest {
         whenever(updateEsame(esame1)).thenReturn(Result.success(Unit))
+        whenever(runLeaderboardCheck()).thenReturn(Result.success(Unit))
         val vm = makeVm()
         advanceUntilIdle()
 
@@ -169,5 +177,6 @@ class LibrettoViewModelTest {
         verify(updateEsame)(esame1)
         verify(refreshUserStats)()
         verify(refreshObiettivi)()
+        verify(runLeaderboardCheck)()
     }
 }

@@ -1,10 +1,18 @@
 package com.unibo.android.data.repository
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
+import android.os.Build
 import android.util.Log
+import androidx.core.app.NotificationCompat
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import com.unibo.android.data.local.RankDataStore
 import com.unibo.android.data.local.SettingsDataStore
 import com.unibo.android.data.remote.NetworkClient
 import com.unibo.android.data.remote.dto.SettingsRequest
+import com.unibo.android.data.worker.LeaderboardCheckWorker
 import com.unibo.android.domain.model.Settings
 import com.unibo.android.domain.repository.SettingsRepository
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +22,7 @@ import kotlinx.coroutines.withContext
 
 private const val TAG = "SettingsRepository"
 
-class SettingsRepositoryImpl(context: Context) : SettingsRepository {
+class SettingsRepositoryImpl(private val context: Context) : SettingsRepository {
 
     private val api = NetworkClient.settingsApiService
     private val dataStore = SettingsDataStore(context)
@@ -79,4 +87,58 @@ class SettingsRepositoryImpl(context: Context) : SettingsRepository {
     }
 
     override fun observeSettings(): Flow<Settings?> = dataStore.settings
+
+    override fun observeLastCheckTimestamp(): Flow<Long> {
+        return RankDataStore(context).lastCheckTimestamp
+    }
+
+    override suspend fun runLeaderboardWorkerNow(): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val request = OneTimeWorkRequestBuilder<LeaderboardCheckWorker>().build()
+            WorkManager.getInstance(context).enqueue(request)
+            Unit
+        }
+    }
+
+    override suspend fun triggerTestNotification(): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val channelId = "gamification_rank_updates"
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(
+                    channelId, 
+                    "Aggiornamenti Classifica", 
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Notifiche relative ai cambiamenti di posizione in classifica"
+                    enableLights(true)
+                    enableVibration(true)
+                }
+                manager.createNotificationChannel(channel)
+            }
+            
+            val notification = NotificationCompat.Builder(context, channelId)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle("Test Notifiche StudentHub")
+                .setContentText("Le notifiche sono attive e funzionano correttamente! 🔔")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .setCategory(NotificationCompat.CATEGORY_STATUS)
+                .build()
+                
+            manager.notify(9999, notification)
+            Unit
+        }
+    }
+
+    override fun observeLocalRank(): Flow<Int> {
+        return RankDataStore(context).currentRank
+    }
+
+    override suspend fun setLocalRank(rank: Int): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            RankDataStore(context).saveMyRank(rank)
+        }
+    }
 }

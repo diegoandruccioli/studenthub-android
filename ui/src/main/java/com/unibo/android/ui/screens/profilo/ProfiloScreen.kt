@@ -43,10 +43,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.unibo.android.domain.model.Settings
 import com.unibo.android.ui.R
+import androidx.compose.material.icons.outlined.NotificationsActive
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private val TEMI = listOf("DEFAULT", "RGB")
 
@@ -70,6 +79,9 @@ fun ProfiloScreen(
         }
     }
 
+    val lastCheckTimestamp by viewModel.lastCheckTimestamp.collectAsStateWithLifecycle()
+    val currentRank by viewModel.currentRank.collectAsStateWithLifecycle()
+
     Box(modifier = modifier.fillMaxSize()) {
         when (val state = uiState) {
             is ProfiloUiState.Loading -> {
@@ -80,8 +92,13 @@ fun ProfiloScreen(
                     settings = state.settings,
                     isLoggingOut = isLoggingOut,
                     isSaving = false,
+                    lastCheckTimestamp = lastCheckTimestamp,
+                    currentRank = currentRank,
                     onSave = { viewModel.saveSettings(it) },
-                    onLogout = { viewModel.logout() }
+                    onLogout = { viewModel.logout() },
+                    onTriggerTestNotification = { viewModel.triggerTestNotification() },
+                    onRunLeaderboardWorkerNow = { viewModel.runLeaderboardWorkerNow() },
+                    onSimulateRankChange = { viewModel.simulateRankChange(it) }
                 )
             }
             is ProfiloUiState.Saving -> {
@@ -89,8 +106,13 @@ fun ProfiloScreen(
                     settings = state.previousSettings,
                     isLoggingOut = isLoggingOut,
                     isSaving = true,
+                    lastCheckTimestamp = lastCheckTimestamp,
+                    currentRank = currentRank,
                     onSave = {},
-                    onLogout = { viewModel.logout() }
+                    onLogout = { viewModel.logout() },
+                    onTriggerTestNotification = { viewModel.triggerTestNotification() },
+                    onRunLeaderboardWorkerNow = { viewModel.runLeaderboardWorkerNow() },
+                    onSimulateRankChange = { viewModel.simulateRankChange(it) }
                 )
             }
             is ProfiloUiState.Error -> {
@@ -98,8 +120,13 @@ fun ProfiloScreen(
                     settings = state.settings ?: Settings("DEFAULT", 18, 27),
                     isLoggingOut = isLoggingOut,
                     isSaving = false,
+                    lastCheckTimestamp = lastCheckTimestamp,
+                    currentRank = currentRank,
                     onSave = { viewModel.saveSettings(it) },
-                    onLogout = { viewModel.logout() }
+                    onLogout = { viewModel.logout() },
+                    onTriggerTestNotification = { viewModel.triggerTestNotification() },
+                    onRunLeaderboardWorkerNow = { viewModel.runLeaderboardWorkerNow() },
+                    onSimulateRankChange = { viewModel.simulateRankChange(it) }
                 )
             }
         }
@@ -116,8 +143,13 @@ private fun ProfiloContent(
     settings: Settings,
     isLoggingOut: Boolean,
     isSaving: Boolean,
+    lastCheckTimestamp: Long,
+    currentRank: Int,
     onSave: (Settings) -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onTriggerTestNotification: () -> Unit,
+    onRunLeaderboardWorkerNow: () -> Unit,
+    onSimulateRankChange: (Int) -> Unit
 ) {
     var selectedTema by remember(settings.temaVoti) { mutableStateOf(settings.temaVoti) }
     var sogliaBassa by remember(settings.rgbSogliaBassa) { mutableStateOf(settings.rgbSogliaBassa.toString()) }
@@ -263,6 +295,144 @@ private fun ProfiloContent(
                         )
                     } else {
                         Text(stringResource(R.string.profilo_salva))
+                    }
+                }
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            shape = MaterialTheme.shapes.large
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.NotificationsActive,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.debug_notifiche_titolo),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Text(
+                    text = stringResource(R.string.debug_notifiche_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                val context = LocalContext.current
+                val permissionGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    ) == PackageManager.PERMISSION_GRANTED
+                } else {
+                    true
+                }
+
+                val permissionText = if (permissionGranted) {
+                    stringResource(R.string.debug_notifiche_permesso_concesso)
+                } else {
+                    stringResource(R.string.debug_notifiche_permesso_negato)
+                }
+                val permissionColor = if (permissionGranted) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.error
+                }
+
+                Text(
+                    text = permissionText,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = permissionColor
+                )
+
+                // Simula rank locale
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(R.string.debug_notifiche_rank_cache, currentRank),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        OutlinedButton(
+                            onClick = { onSimulateRankChange(currentRank + 1) },
+                            modifier = Modifier.height(32.dp),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.debug_notifiche_btn_sim_peggiore),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                        if (currentRank > 1) {
+                            OutlinedButton(
+                                onClick = { onSimulateRankChange(currentRank - 1) },
+                                modifier = Modifier.height(32.dp),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.debug_notifiche_btn_sim_migliore),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
+                    }
+                }
+
+                val lastCheckStr = if (lastCheckTimestamp == 0L) {
+                    stringResource(R.string.debug_notifiche_mai)
+                } else {
+                    val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
+                    sdf.format(Date(lastCheckTimestamp))
+                }
+
+                Text(
+                    text = stringResource(R.string.debug_notifiche_ultima_verifica, lastCheckStr),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onTriggerTestNotification,
+                        modifier = Modifier.weight(1f),
+                        enabled = permissionGranted
+                    ) {
+                        Text(
+                            text = stringResource(R.string.debug_notifiche_btn_test),
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+
+                    Button(
+                        onClick = onRunLeaderboardWorkerNow,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.debug_notifiche_btn_run_worker),
+                            style = MaterialTheme.typography.labelMedium
+                        )
                     }
                 }
             }

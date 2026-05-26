@@ -98,4 +98,17 @@
     <string name="profilo_account_titolo">Account</string>
     <string name="profilo_logout">Esci dall\'account</string>
     <string name="profilo_errore_soglie">La soglia alta deve essere maggiore di quella bassa</string>
+
+    <!-- Debug Notifiche -->
+    <string name="debug_notifiche_titolo">Debug Notifiche &amp; Background</string>
+    <string name="debug_notifiche_desc">Verifica il funzionamento del background worker e del sistema di notifiche push locali.</string>
+    <string name="debug_notifiche_permesso_concesso">Permesso notifiche: Concesso ✅</string>
+    <string name="debug_notifiche_permesso_negato">Permesso notifiche: Non concesso ❌</string>
+    <string name="debug_notifiche_ultima_verifica">Ultima verifica: %s</string>
+    <string name="debug_notifiche_mai">Mai eseguito</string>
+    <string name="debug_notifiche_btn_test">Invia Notifica Test</string>
+    <string name="debug_notifiche_btn_run_worker">Verifica Classifica Ora</string>
+    <string name="debug_notifiche_rank_cache">Rank in cache locale: %1$d</string>
+    <string name="debug_notifiche_btn_sim_peggiore">Simula Rank +1</string>
+    <string name="debug_notifiche_btn_sim_migliore">Simula Rank -1</string>
 </resources>

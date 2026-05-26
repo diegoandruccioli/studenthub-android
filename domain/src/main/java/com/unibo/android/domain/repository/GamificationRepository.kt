@@ -9,4 +9,5 @@ interface GamificationRepository {
     val leaderboardFlow: Flow<List<LeaderboardEntry>>
     suspend fun getUserStats(): Result<Unit>
     suspend fun getLeaderboard(): Result<Unit>
+    suspend fun runLeaderboardWorkerNow(): Result<Unit>
 }

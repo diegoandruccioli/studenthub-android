@@ -15,8 +15,9 @@ import com.unibo.android.domain.usecase.GetEsamiUseCase
 import com.unibo.android.domain.usecase.GetSettingsUseCase
 import com.unibo.android.domain.usecase.ObserveSettingsUseCase
 import com.unibo.android.domain.usecase.RefreshEsamiUseCase
-import com.unibo.android.domain.usecase.RefreshObiettiviUseCase
 import com.unibo.android.domain.usecase.RefreshUserStatsUseCase
+import com.unibo.android.domain.usecase.RefreshObiettiviUseCase
+import com.unibo.android.domain.usecase.RunLeaderboardCheckUseCase
 import com.unibo.android.domain.usecase.UpdateEsameUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,6 +41,7 @@ class LibrettoViewModel(
     private val refreshObiettiviUseCase: RefreshObiettiviUseCase,
     private val observeSettingsUseCase: ObserveSettingsUseCase,
     private val getSettingsUseCase: GetSettingsUseCase,
+    private val runLeaderboardCheckUseCase: RunLeaderboardCheckUseCase,
 ) : ViewModel() {
 
     private val _sortBy = MutableStateFlow(SortBy.DATA)
@@ -89,26 +91,29 @@ class LibrettoViewModel(
                 // Aggiorniamo sia statistiche che obiettivi in parallelo per reattività massima
                 launch { refreshUserStatsUseCase() }
                 launch { refreshObiettiviUseCase() }
+                launch { runLeaderboardCheckUseCase() }
             }
         }
     }
-
+ 
     fun updateEsame(esame: Esame) {
         viewModelScope.launch {
             val result = updateEsameUseCase(esame)
             if (result.isSuccess) {
                 launch { refreshUserStatsUseCase() }
                 launch { refreshObiettiviUseCase() }
+                launch { runLeaderboardCheckUseCase() }
             }
         }
     }
-
+ 
     fun deleteEsame(esame: Esame) {
         viewModelScope.launch {
             val result = deleteEsameUseCase(esame)
             if (result.isSuccess) {
                 launch { refreshUserStatsUseCase() }
                 launch { refreshObiettiviUseCase() }
+                launch { runLeaderboardCheckUseCase() }
             }
         }
     }
@@ -131,6 +136,7 @@ class LibrettoViewModel(
                 refreshObiettiviUseCase = RefreshObiettiviUseCase(obiettivoRepository),
                 observeSettingsUseCase = ObserveSettingsUseCase(settingsRepository),
                 getSettingsUseCase = GetSettingsUseCase(settingsRepository),
+                runLeaderboardCheckUseCase = RunLeaderboardCheckUseCase(gamificationRepository),
             ) as T
         }
     }

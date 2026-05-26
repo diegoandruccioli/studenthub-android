@@ -1,11 +1,15 @@
 package com.unibo.android.data.repository
 
 import android.content.Context
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.unibo.android.data.local.RankDataStore
 import com.unibo.android.data.local.SessionDataStore
 import com.unibo.android.data.local.StudentHubDatabase
 import com.unibo.android.data.local.entity.LeaderboardEntity
 import com.unibo.android.data.remote.NetworkClient
+import com.unibo.android.data.worker.LeaderboardCheckWorker
+import com.unibo.android.data.worker.NotificationUtils
 import com.unibo.android.domain.model.LeaderboardEntry
 import com.unibo.android.domain.model.UserStats
 import com.unibo.android.domain.repository.GamificationRepository
@@ -13,11 +17,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 import java.io.IOException
 
-class GamificationRepositoryImpl(context: Context) : GamificationRepository {
+class GamificationRepositoryImpl(private val context: Context) : GamificationRepository {
 
     private val api = NetworkClient.gamificationApiService
     private val rankDataStore = RankDataStore(context)
@@ -75,11 +80,19 @@ class GamificationRepositoryImpl(context: Context) : GamificationRepository {
 
     override suspend fun getLeaderboard(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
+            val oldRank = rankDataStore.currentRank.firstOrNull()
             val response = api.getLeaderboard()
             if (response.isSuccessful) {
                 val responseDto = response.body()
                 val entriesDto = responseDto?.leaderboard ?: emptyList()
-                responseDto?.myRank?.let { rankDataStore.saveMyRank(it) }
+                
+                val newRank = responseDto?.myRank
+                if (newRank != null) {
+                    rankDataStore.saveMyRank(newRank)
+                    if (oldRank != null && oldRank > 0 && newRank != oldRank) {
+                        NotificationUtils.showRankNotification(context, newRank, oldRank)
+                    }
+                }
 
                 val entities = entriesDto.map {
                     LeaderboardEntity(
@@ -98,6 +111,14 @@ class GamificationRepositoryImpl(context: Context) : GamificationRepository {
             Result.failure(Exception("Errore di rete: impossibile scaricare la classifica", e))
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    override suspend fun runLeaderboardWorkerNow(): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val request = OneTimeWorkRequestBuilder<LeaderboardCheckWorker>().build()
+            WorkManager.getInstance(context).enqueue(request)
+            Unit
         }
     }
 }

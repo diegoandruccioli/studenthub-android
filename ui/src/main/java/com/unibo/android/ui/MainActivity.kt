@@ -141,7 +141,8 @@ fun StudentHubApp() {
         factory = ProfiloViewModel.provideFactory(
             getSettingsUseCase = GetSettingsUseCase(settingsRepository),
             updateSettingsUseCase = UpdateSettingsUseCase(settingsRepository),
-            logoutUseCase = LogoutUseCase(authRepository)
+            logoutUseCase = LogoutUseCase(authRepository),
+            settingsRepository = settingsRepository
         )
     )
 
