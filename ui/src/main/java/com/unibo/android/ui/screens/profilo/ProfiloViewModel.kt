@@ -9,10 +9,8 @@ import com.unibo.android.domain.usecase.GetSettingsUseCase
 import com.unibo.android.domain.usecase.LogoutUseCase
 import com.unibo.android.domain.usecase.UpdateSettingsUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class ProfiloViewModel(
@@ -27,20 +25,6 @@ class ProfiloViewModel(
 
     private val _isLoggingOut = MutableStateFlow(false)
     val isLoggingOut: StateFlow<Boolean> = _isLoggingOut.asStateFlow()
-
-    val lastCheckTimestamp: StateFlow<Long> = settingsRepository.observeLastCheckTimestamp()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = 0L
-        )
-
-    val currentRank: StateFlow<Int> = settingsRepository.observeLocalRank()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = 0
-        )
 
     init {
         loadSettings()
@@ -79,18 +63,6 @@ class ProfiloViewModel(
     fun triggerTestNotification() {
         viewModelScope.launch {
             settingsRepository.triggerTestNotification()
-        }
-    }
-
-    fun runLeaderboardWorkerNow() {
-        viewModelScope.launch {
-            settingsRepository.runLeaderboardWorkerNow()
-        }
-    }
-
-    fun simulateRankChange(newRank: Int) {
-        viewModelScope.launch {
-            settingsRepository.setLocalRank(newRank)
         }
     }
 

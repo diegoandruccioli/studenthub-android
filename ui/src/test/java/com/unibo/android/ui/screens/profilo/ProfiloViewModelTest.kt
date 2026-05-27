@@ -33,8 +33,6 @@ class ProfiloViewModelTest {
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        whenever(settingsRepository.observeLastCheckTimestamp()).thenReturn(kotlinx.coroutines.flow.flowOf(0L))
-        whenever(settingsRepository.observeLocalRank()).thenReturn(kotlinx.coroutines.flow.flowOf(0))
     }
 
     @After
