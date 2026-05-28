@@ -21,13 +21,13 @@ object StatisticheCalculator {
             sommaCfu += esame.cfu
             sommaProdotti += esame.voto * esame.cfu
             val mediaCorrente = if (sommaCfu > 0) sommaProdotti / sommaCfu else 0.0
-            
+
             andamento.add(
                 PuntoAndamento(
                     data = esame.dataEsame,
                     voto = esame.voto,
-                    mediaPonderataProgressiva = mediaCorrente
-                )
+                    mediaPonderataProgressiva = mediaCorrente,
+                ),
             )
         }
 
@@ -36,7 +36,7 @@ object StatisticheCalculator {
             mediaPonderata = mediaFinal,
             cfuSostenuti = sommaCfu,
             baseLaurea = (mediaFinal * 110.0) / 30.0,
-            andamentoCarriera = andamento
+            andamentoCarriera = andamento,
         )
     }
 }

@@ -5,5 +5,6 @@ import kotlinx.coroutines.flow.Flow
 
 interface ObiettivoRepository {
     fun getObiettivi(): Flow<List<Obiettivo>>
+
     suspend fun refreshObiettivi(): Result<Unit>
 }

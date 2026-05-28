@@ -12,7 +12,7 @@ data class StatisticheUiModel(
     val baseLaurea: String,
     val puntiVoti: List<OffsetRelativo>,
     val puntiMedia: List<OffsetRelativo>,
-    val yMediaFissa: Float // Nuova coordinata Y (0.0 - 1.0) per la linea orizzontale
+    val yMediaFissa: Float, // Nuova coordinata Y (0.0 - 1.0) per la linea orizzontale
 )
 
 /**
@@ -20,5 +20,5 @@ data class StatisticheUiModel(
  */
 data class OffsetRelativo(
     val x: Float,
-    val y: Float
+    val y: Float,
 )

@@ -38,71 +38,78 @@ fun EsameCard(
     settings: Settings,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
 
-    val (badgeBg, badgeFg) = when (settings.temaVoti) {
-        "LODE" -> if (esame.lode)
-            Color(0xFFFFD54F) to Color(0xFF3E2000)   // amber per 30L
-        else
-            primaryContainer to onPrimaryContainer
-        "RGB" -> when {
-            esame.voto >= settings.rgbSogliaAlta ->
-                Color(0xFFC8E6C9) to Color(0xFF1B5E20)  // verde
-            esame.voto >= settings.rgbSogliaBassa ->
-                Color(0xFFFFE0B2) to Color(0xFF4E2600)  // arancione
-            else ->
-                Color(0xFFFFCDD2) to Color(0xFF7F0000)  // rosso
+    val (badgeBg, badgeFg) =
+        when (settings.temaVoti) {
+            "LODE" ->
+                if (esame.lode) {
+                    Color(0xFFFFD54F) to Color(0xFF3E2000) // amber per 30L
+                } else {
+                    primaryContainer to onPrimaryContainer
+                }
+            "RGB" ->
+                when {
+                    esame.voto >= settings.rgbSogliaAlta ->
+                        Color(0xFFC8E6C9) to Color(0xFF1B5E20) // verde
+                    esame.voto >= settings.rgbSogliaBassa ->
+                        Color(0xFFFFE0B2) to Color(0xFF4E2600) // arancione
+                    else ->
+                        Color(0xFFFFCDD2) to Color(0xFF7F0000) // rosso
+                }
+            else -> primaryContainer to onPrimaryContainer // STANDARD
         }
-        else -> primaryContainer to onPrimaryContainer // STANDARD
-    }
 
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(badgeBg)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(badgeBg)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = if (esame.lode) "${esame.voto}L" else "${esame.voto}",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = badgeFg
+                    color = badgeFg,
                 )
             }
 
             Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 16.dp)
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .padding(horizontal = 16.dp),
             ) {
                 Text(
                     text = esame.nome,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = "${esame.cfu} CFU · ${esame.dataEsame.format(dateFormatter)}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -111,7 +118,7 @@ fun EsameCard(
                     Icon(
                         imageVector = Icons.Outlined.Edit,
                         contentDescription = stringResource(R.string.modifica_esame),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                 }
 
@@ -119,7 +126,7 @@ fun EsameCard(
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = stringResource(R.string.elimina_esame),
-                        tint = MaterialTheme.colorScheme.error
+                        tint = MaterialTheme.colorScheme.error,
                     )
                 }
             }
@@ -132,17 +139,18 @@ fun EsameCard(
 private fun EsameCardPreview() {
     StudentHubTheme {
         EsameCard(
-            esame = Esame(
-                id = 1,
-                nome = "Sistemi Mobili",
-                voto = 30,
-                lode = true,
-                cfu = 6,
-                dataEsame = LocalDate.of(2025, 6, 15)
-            ),
+            esame =
+                Esame(
+                    id = 1,
+                    nome = "Sistemi Mobili",
+                    voto = 30,
+                    lode = true,
+                    cfu = 6,
+                    dataEsame = LocalDate.of(2025, 6, 15),
+                ),
             settings = Settings("LODE", 18, 30),
             onEditClick = {},
-            onDeleteClick = {}
+            onDeleteClick = {},
         )
     }
 }

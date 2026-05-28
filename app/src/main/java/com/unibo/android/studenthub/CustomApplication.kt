@@ -20,7 +20,6 @@ import com.unibo.android.domain.repository.SettingsRepository
 import java.util.concurrent.TimeUnit
 
 class CustomApplication : Application(), RepositoryProvider {
-
     private lateinit var repositoryProviderImpl: RepositoryProviderImpl
 
     override fun onCreate() {
@@ -32,45 +31,44 @@ class CustomApplication : Application(), RepositoryProvider {
     }
 
     private fun scheduleSyncWorker() {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-        val request = PeriodicWorkRequestBuilder<SyncExamsWorker>(1, TimeUnit.HOURS)
-            .setConstraints(constraints)
-            .build()
+        val constraints =
+            Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+        val request =
+            PeriodicWorkRequestBuilder<SyncExamsWorker>(1, TimeUnit.HOURS)
+                .setConstraints(constraints)
+                .build()
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "SyncExamsWorker",
             ExistingPeriodicWorkPolicy.KEEP,
-            request
+            request,
         )
     }
 
     private fun scheduleLeaderboardWorker() {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-        val request = PeriodicWorkRequestBuilder<LeaderboardCheckWorker>(15, TimeUnit.MINUTES)
-            .setConstraints(constraints)
-            .build()
+        val constraints =
+            Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+        val request =
+            PeriodicWorkRequestBuilder<LeaderboardCheckWorker>(15, TimeUnit.MINUTES)
+                .setConstraints(constraints)
+                .build()
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "LeaderboardCheckWorker",
             ExistingPeriodicWorkPolicy.KEEP,
-            request
+            request,
         )
     }
 
-    override fun getEsameRepository(): EsameRepository =
-        repositoryProviderImpl.getEsameRepository()
+    override fun getEsameRepository(): EsameRepository = repositoryProviderImpl.getEsameRepository()
 
-    override fun getObiettivoRepository(): ObiettivoRepository =
-        repositoryProviderImpl.getObiettivoRepository()
+    override fun getObiettivoRepository(): ObiettivoRepository = repositoryProviderImpl.getObiettivoRepository()
 
-    override fun getAuthRepository(): AuthRepository =
-        repositoryProviderImpl.getAuthRepository()
+    override fun getAuthRepository(): AuthRepository = repositoryProviderImpl.getAuthRepository()
 
-    override fun getSettingsRepository(): SettingsRepository =
-        repositoryProviderImpl.getSettingsRepository()
+    override fun getSettingsRepository(): SettingsRepository = repositoryProviderImpl.getSettingsRepository()
 
-    override fun getGamificationRepository(): GamificationRepository =
-        repositoryProviderImpl.getGamificationRepository()
+    override fun getGamificationRepository(): GamificationRepository = repositoryProviderImpl.getGamificationRepository()
 }

@@ -5,5 +5,5 @@ data class Obiettivo(
     val nome: String,
     val descrizione: String,
     val completato: Boolean,
-    val premioXp: Int
+    val premioXp: Int,
 )

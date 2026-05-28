@@ -5,11 +5,11 @@ data class StatsResponseDto(
     val mediaPonderata: Double,
     val baseLaurea: Double,
     val totaleCfu: Int,
-    val chartData: ChartDataDto
+    val chartData: ChartDataDto,
 )
 
 data class ChartDataDto(
     val labels: List<String>,
     val data: List<Int>,
-    val examNames: List<String>
+    val examNames: List<String>,
 )

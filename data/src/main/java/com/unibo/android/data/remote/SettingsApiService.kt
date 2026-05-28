@@ -13,5 +13,7 @@ interface SettingsApiService {
     suspend fun getSettings(): Response<SettingsResponse>
 
     @PUT("settings")
-    suspend fun updateSettings(@Body body: SettingsRequest): Response<ResponseBody>
+    suspend fun updateSettings(
+        @Body body: SettingsRequest,
+    ): Response<ResponseBody>
 }

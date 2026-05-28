@@ -16,9 +16,10 @@ import com.unibo.android.data.local.entity.ObiettivoEntity
 @Database(entities = [EsameEntity::class, ObiettivoEntity::class, LeaderboardEntity::class], version = 12)
 @TypeConverters(Converters::class)
 abstract class StudentHubDatabase : RoomDatabase() {
-
     abstract fun esameDao(): EsameDao
+
     abstract fun obiettiviDao(): ObiettivoDao
+
     abstract fun leaderboardDao(): LeaderboardDao
 
     companion object {
@@ -29,24 +30,28 @@ abstract class StudentHubDatabase : RoomDatabase() {
                 Room.databaseBuilder(
                     context.applicationContext,
                     StudentHubDatabase::class.java,
-                    "studenthub_db"
+                    "studenthub_db",
                 )
-                .fallbackToDestructiveMigration(true)
-                .addCallback(object : Callback() {
-                    override fun onOpen(db: SupportSQLiteDatabase) {
-                        super.onOpen(db)
-                        // Inserimento sicuro post-creazione tabelle
-                        db.execSQL("""
-                            INSERT OR IGNORE INTO obiettivi (id, nome, descrizione, completato, premio_xp)
-                            VALUES 
-                            (1, 'Primo Passo', 'Registra il tuo primo esame superato', 0, 150),
-                            (2, 'Secchione', 'Ottieni la tua prima Lode', 0, 300),
-                            (3, 'Maratoneta', 'Supera 3 esami in un mese', 0, 500),
-                            (4, 'Giro di Boa', 'Raggiungi 90 CFU', 0, 800)
-                        """.trimIndent())
-                    }
-                })
-                .build().also { INSTANCE = it }
+                    .fallbackToDestructiveMigration(true)
+                    .addCallback(
+                        object : Callback() {
+                            override fun onOpen(db: SupportSQLiteDatabase) {
+                                super.onOpen(db)
+                                // Inserimento sicuro post-creazione tabelle
+                                db.execSQL(
+                                    """
+                                    INSERT OR IGNORE INTO obiettivi (id, nome, descrizione, completato, premio_xp)
+                                    VALUES 
+                                    (1, 'Primo Passo', 'Registra il tuo primo esame superato', 0, 150),
+                                    (2, 'Secchione', 'Ottieni la tua prima Lode', 0, 300),
+                                    (3, 'Maratoneta', 'Supera 3 esami in un mese', 0, 500),
+                                    (4, 'Giro di Boa', 'Raggiungi 90 CFU', 0, 800)
+                                    """.trimIndent(),
+                                )
+                            }
+                        },
+                    )
+                    .build().also { INSTANCE = it }
             }
         }
     }

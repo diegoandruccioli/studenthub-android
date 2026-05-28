@@ -15,38 +15,48 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
-
     private val loginUseCase = LoginUseCase(repository)
     private val registerUseCase = RegisterUseCase(repository)
 
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
-    val sessionState: StateFlow<Boolean?> = repository.isLoggedIn()
-        .map { it as Boolean? }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    val sessionState: StateFlow<Boolean?> =
+        repository.isLoggedIn()
+            .map { it as Boolean? }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    fun login(email: String, password: String) {
+    fun login(
+        email: String,
+        password: String,
+    ) {
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading
             val result = loginUseCase(email, password)
-            _uiState.value = if (result.isSuccess) {
-                AuthUiState.Success
-            } else {
-                AuthUiState.Error(result.exceptionOrNull()?.message ?: "Errore sconosciuto")
-            }
+            _uiState.value =
+                if (result.isSuccess) {
+                    AuthUiState.Success
+                } else {
+                    AuthUiState.Error(result.exceptionOrNull()?.message ?: "Errore sconosciuto")
+                }
         }
     }
 
-    fun register(nome: String, cognome: String, email: String, password: String) {
+    fun register(
+        nome: String,
+        cognome: String,
+        email: String,
+        password: String,
+    ) {
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading
             val result = registerUseCase(nome, cognome, email, password)
-            _uiState.value = if (result.isSuccess) {
-                AuthUiState.Success
-            } else {
-                AuthUiState.Error(result.exceptionOrNull()?.message ?: "Errore sconosciuto")
-            }
+            _uiState.value =
+                if (result.isSuccess) {
+                    AuthUiState.Success
+                } else {
+                    AuthUiState.Error(result.exceptionOrNull()?.message ?: "Errore sconosciuto")
+                }
         }
     }
 
@@ -58,8 +68,7 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
         fun provideFactory(authRepository: AuthRepository): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
-                override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                    AuthViewModel(authRepository) as T
+                override fun <T : ViewModel> create(modelClass: Class<T>): T = AuthViewModel(authRepository) as T
             }
     }
 }

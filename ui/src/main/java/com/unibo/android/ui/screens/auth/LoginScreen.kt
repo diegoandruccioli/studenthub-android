@@ -47,7 +47,7 @@ import com.unibo.android.ui.R
 fun LoginScreen(
     viewModel: AuthViewModel,
     onNavigateToRegister: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -57,9 +57,14 @@ fun LoginScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var emailTouched by remember { mutableStateOf(false) }
 
-    val emailError = if (emailTouched && email.isNotEmpty() &&
-        !Patterns.EMAIL_ADDRESS.matcher(email).matches()
-    ) stringResource(R.string.errore_email_formato) else null
+    val emailError =
+        if (emailTouched && email.isNotEmpty() &&
+            !Patterns.EMAIL_ADDRESS.matcher(email).matches()
+        ) {
+            stringResource(R.string.errore_email_formato)
+        } else {
+            null
+        }
 
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Error) {
@@ -69,40 +74,45 @@ fun LoginScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         Column(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 24.dp),
+            modifier =
+                modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 24.dp),
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 text = stringResource(R.string.login_title),
-                style = MaterialTheme.typography.headlineLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                style =
+                    MaterialTheme.typography.headlineLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    ),
             )
             Text(
                 text = stringResource(R.string.login_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp, bottom = 32.dp)
+                modifier = Modifier.padding(top = 4.dp, bottom = 32.dp),
             )
 
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it; emailTouched = true },
+                onValueChange = {
+                    email = it
+                    emailTouched = true
+                },
                 label = { Text(stringResource(R.string.hint_email)) },
                 leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null) },
                 isError = emailError != null,
                 supportingText = { if (emailError != null) Text(emailError) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -115,37 +125,51 @@ fun LoginScreen(
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
-                            imageVector = if (passwordVisible) Icons.Outlined.Visibility
-                                         else Icons.Outlined.VisibilityOff,
-                            contentDescription = stringResource(
-                                if (passwordVisible) R.string.nascondi_password
-                                else R.string.mostra_password
-                            )
+                            imageVector =
+                                if (passwordVisible) {
+                                    Icons.Outlined.Visibility
+                                } else {
+                                    Icons.Outlined.VisibilityOff
+                                },
+                            contentDescription =
+                                stringResource(
+                                    if (passwordVisible) {
+                                        R.string.nascondi_password
+                                    } else {
+                                        R.string.mostra_password
+                                    },
+                                ),
                         )
                     }
                 },
-                visualTransformation = if (passwordVisible) VisualTransformation.None
-                                       else PasswordVisualTransformation(),
+                visualTransformation =
+                    if (passwordVisible) {
+                        VisualTransformation.None
+                    } else {
+                        PasswordVisualTransformation()
+                    },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
                 onClick = { viewModel.login(email.trim(), password) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                enabled = uiState !is AuthUiState.Loading &&
-                    email.isNotBlank() && emailError == null && password.isNotBlank()
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                enabled =
+                    uiState !is AuthUiState.Loading &&
+                        email.isNotBlank() && emailError == null && password.isNotBlank(),
             ) {
                 if (uiState is AuthUiState.Loading) {
                     CircularProgressIndicator(
                         color = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp
+                        strokeWidth = 2.dp,
                     )
                 } else {
                     Text(stringResource(R.string.btn_accedi))

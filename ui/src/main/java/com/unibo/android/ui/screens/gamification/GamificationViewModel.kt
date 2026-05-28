@@ -26,31 +26,33 @@ class GamificationViewModel(
     private val refreshUserStatsUseCase: RefreshUserStatsUseCase,
     private val refreshLeaderboardUseCase: RefreshLeaderboardUseCase,
 ) : ViewModel() {
-
     private val _errorMessage = MutableStateFlow<String?>(null)
     private val _isLoading = MutableStateFlow(true)
 
     /**
      * The unified UI state for the screen.
      */
-    val uiState: StateFlow<GamificationUiState> = combine(
-        getGamificationDataUseCase(),
-        getLeaderboardUseCase(),
-        _errorMessage,
-        _isLoading,
-    ) { stats, leaderboard, error, isLoading ->
-        when {
-            error != null -> GamificationUiState.Error(error)
-            isLoading -> GamificationUiState.Loading
-            else -> GamificationUiState.Success(
-                stats = stats,
-                leaderboard = leaderboard.asSequence()
-                    .sortedByDescending { it.xpTotali }
-                    .map { it.copy(isMe = it.userId == stats.userId) }
-                    .toList(),
-            )
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), GamificationUiState.Loading)
+    val uiState: StateFlow<GamificationUiState> =
+        combine(
+            getGamificationDataUseCase(),
+            getLeaderboardUseCase(),
+            _errorMessage,
+            _isLoading,
+        ) { stats, leaderboard, error, isLoading ->
+            when {
+                error != null -> GamificationUiState.Error(error)
+                isLoading -> GamificationUiState.Loading
+                else ->
+                    GamificationUiState.Success(
+                        stats = stats,
+                        leaderboard =
+                            leaderboard.asSequence()
+                                .sortedByDescending { it.xpTotali }
+                                .map { it.copy(isMe = it.userId == stats.userId) }
+                                .toList(),
+                    )
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), GamificationUiState.Loading)
 
     init {
         refreshAll()
@@ -63,7 +65,7 @@ class GamificationViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
-            
+
             val leaderboardDeferred = async { refreshLeaderboardUseCase() }
             val statsDeferred = async { refreshUserStatsUseCase() }
 
@@ -98,9 +100,7 @@ class GamificationViewModel(
     }
 
     companion object {
-        fun provideFactory(
-            gamificationRepository: GamificationRepository,
-        ): ViewModelProvider.Factory =
+        fun provideFactory(gamificationRepository: GamificationRepository): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {

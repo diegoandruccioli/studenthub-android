@@ -17,9 +17,8 @@ class ProfiloViewModel(
     private val getSettingsUseCase: GetSettingsUseCase,
     private val updateSettingsUseCase: UpdateSettingsUseCase,
     private val logoutUseCase: LogoutUseCase,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow<ProfiloUiState>(ProfiloUiState.Loading)
     val uiState: StateFlow<ProfiloUiState> = _uiState.asStateFlow()
 
@@ -34,10 +33,11 @@ class ProfiloViewModel(
         viewModelScope.launch {
             _uiState.value = ProfiloUiState.Loading
             val result = getSettingsUseCase()
-            _uiState.value = result.fold(
-                onSuccess = { ProfiloUiState.Success(it) },
-                onFailure = { ProfiloUiState.Error(it.message ?: "Errore sconosciuto") }
-            )
+            _uiState.value =
+                result.fold(
+                    onSuccess = { ProfiloUiState.Success(it) },
+                    onFailure = { ProfiloUiState.Error(it.message ?: "Errore sconosciuto") },
+                )
         }
     }
 
@@ -45,10 +45,11 @@ class ProfiloViewModel(
         viewModelScope.launch {
             _uiState.value = ProfiloUiState.Saving(settings)
             val result = updateSettingsUseCase(settings)
-            _uiState.value = result.fold(
-                onSuccess = { ProfiloUiState.Success(settings) },
-                onFailure = { ProfiloUiState.Error(it.message ?: "Errore nel salvataggio", settings) }
-            )
+            _uiState.value =
+                result.fold(
+                    onSuccess = { ProfiloUiState.Success(settings) },
+                    onFailure = { ProfiloUiState.Error(it.message ?: "Errore nel salvataggio", settings) },
+                )
         }
     }
 
@@ -71,16 +72,17 @@ class ProfiloViewModel(
             getSettingsUseCase: GetSettingsUseCase,
             updateSettingsUseCase: UpdateSettingsUseCase,
             logoutUseCase: LogoutUseCase,
-            settingsRepository: SettingsRepository
-        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                ProfiloViewModel(
-                    getSettingsUseCase = getSettingsUseCase,
-                    updateSettingsUseCase = updateSettingsUseCase,
-                    logoutUseCase = logoutUseCase,
-                    settingsRepository = settingsRepository
-                ) as T
-        }
+            settingsRepository: SettingsRepository,
+        ): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                    ProfiloViewModel(
+                        getSettingsUseCase = getSettingsUseCase,
+                        updateSettingsUseCase = updateSettingsUseCase,
+                        logoutUseCase = logoutUseCase,
+                        settingsRepository = settingsRepository,
+                    ) as T
+            }
     }
 }

@@ -26,8 +26,12 @@ class RepositoryProviderImpl(private val context: Context) : RepositoryProvider 
     private val gamificationRepo: GamificationRepository by lazy { GamificationRepositoryImpl(context) }
 
     override fun getEsameRepository(): EsameRepository = esameRepo
+
     override fun getObiettivoRepository(): ObiettivoRepository = obiettivoRepo
+
     override fun getAuthRepository(): AuthRepository = authRepo
+
     override fun getSettingsRepository(): SettingsRepository = settingsRepo
+
     override fun getGamificationRepository(): GamificationRepository = gamificationRepo
 }

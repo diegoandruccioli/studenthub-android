@@ -1,7 +1,7 @@
 package com.unibo.android.ui.screens.obiettivi
 
-import android.app.Activity
 import android.Manifest
+import android.app.Activity
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -54,7 +54,6 @@ import com.unibo.android.ui.screens.gamification.GamificationUiState
 import com.unibo.android.ui.screens.gamification.GamificationViewModel
 import com.unibo.android.ui.screens.gamification.components.LeaderboardItem
 
-
 @Composable
 fun ObiettiviScreen(
     viewModel: ObiettiviViewModel,
@@ -67,27 +66,29 @@ fun ObiettiviScreen(
     var showRationaleDialog by remember { mutableStateOf(false) }
 
     // Launcher per la richiesta del permesso notifiche (Android 13+)
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            // Permesso concesso
+    val permissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+        ) { isGranted ->
+            if (isGranted) {
+                // Permesso concesso
+            }
         }
-    }
 
     LaunchedEffect(Unit) {
         gamificationViewModel.refreshAll()
         viewModel.refreshObiettivi()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val permissionStatus = ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS
-            )
+            val permissionStatus =
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS,
+                )
             if (permissionStatus != PackageManager.PERMISSION_GRANTED) {
                 if (ActivityCompat.shouldShowRequestPermissionRationale(
                         context as Activity,
-                        Manifest.permission.POST_NOTIFICATIONS
+                        Manifest.permission.POST_NOTIFICATIONS,
                     )
                 ) {
                     showRationaleDialog = true
@@ -115,7 +116,7 @@ fun ObiettiviScreen(
                 TextButton(onClick = { showRationaleDialog = false }) {
                     Text(stringResource(R.string.notifiche_permesso_rifiuta))
                 }
-            }
+            },
         )
     }
 
@@ -123,44 +124,44 @@ fun ObiettiviScreen(
         ObiettiviScreenContent(
             uiState = uiState,
             gamificationState = gamificationState,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
         )
     }
 }
-
-
 
 @Composable
 fun ObiettiviScreenContent(
     uiState: ObiettiviUiState,
     gamificationState: GamificationUiState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier =
+            modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // --- INTESTAZIONE ---
         Column {
             Text(
                 text = stringResource(R.string.obiettivi_breadcrumb),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
                 text = stringResource(R.string.titolo_obiettivi),
-                style = MaterialTheme.typography.headlineLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                style =
+                    MaterialTheme.typography.headlineLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    ),
             )
             Text(
                 text = stringResource(R.string.descrizione_obiettivi),
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
         }
 
@@ -171,7 +172,7 @@ fun ObiettiviScreenContent(
                     Modifier
                         .fillMaxWidth()
                         .height(200.dp),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator()
                 }
@@ -181,7 +182,7 @@ fun ObiettiviScreenContent(
                     Modifier
                         .fillMaxWidth()
                         .padding(24.dp),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(state.message, color = MaterialTheme.colorScheme.error)
                 }
@@ -190,42 +191,44 @@ fun ObiettiviScreenContent(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                        ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 ) {
                     Column {
                         // Header Tabella Obiettivi
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(MaterialTheme.colorScheme.primary)
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.primary)
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Text(
                                     text = stringResource(R.string.obiettivi_col_obiettivo),
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimary
+                                    color = MaterialTheme.colorScheme.onPrimary,
                                 )
                                 Text(
                                     text = stringResource(R.string.obiettivi_col_premio),
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimary
+                                    color = MaterialTheme.colorScheme.onPrimary,
                                 )
                             }
                         }
-                        
+
                         // Lista Obiettivi
                         Column(
                             modifier = Modifier.padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             state.obiettivi.forEach { obiettivo ->
                                 ObiettivoItem(obiettivo)
@@ -242,24 +245,26 @@ fun ObiettiviScreenContent(
                 text = stringResource(R.string.sezione_classifica),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
             )
-            
+
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.large,
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             ) {
                 when (val state = gamificationState) {
                     is GamificationUiState.Loading -> {
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            contentAlignment = Alignment.Center
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                            contentAlignment = Alignment.Center,
                         ) {
                             CircularProgressIndicator()
                         }
@@ -269,29 +274,30 @@ fun ObiettiviScreenContent(
                             state.leaderboard.forEachIndexed { index, entry ->
                                 LeaderboardItem(
                                     entry = entry,
-                                    rank = index + 1
+                                    rank = index + 1,
                                 )
                             }
                         }
                     }
                     is GamificationUiState.Error -> {
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            contentAlignment = Alignment.Center
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                            contentAlignment = Alignment.Center,
                         ) {
                             Text(
                                 text = stringResource(R.string.errore_carica_classifica),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.error
+                                color = MaterialTheme.colorScheme.error,
                             )
                         }
                     }
                 }
             }
         }
-        
+
         Spacer(modifier = Modifier.height(64.dp))
     }
 }
@@ -305,20 +311,25 @@ private fun ObiettivoItem(obiettivo: Obiettivo) {
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        color = MaterialTheme.colorScheme.surface
+        color = MaterialTheme.colorScheme.surface,
     ) {
         Row(
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .padding(12.dp)
+                    .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = if (obiettivo.completato) Icons.Default.CheckCircle
-                              else Icons.Outlined.Circle,
+                imageVector =
+                    if (obiettivo.completato) {
+                        Icons.Default.CheckCircle
+                    } else {
+                        Icons.Outlined.Circle
+                    },
                 contentDescription = null,
                 tint = if (obiettivo.completato) completedColor else incompleteColor,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(28.dp),
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -326,27 +337,39 @@ private fun ObiettivoItem(obiettivo: Obiettivo) {
                     text = obiettivo.nome,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
-                    color = if (obiettivo.completato) MaterialTheme.colorScheme.onSurface
-                            else MaterialTheme.colorScheme.onSurfaceVariant
+                    color =
+                        if (obiettivo.completato) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                 )
                 Text(
                     text = obiettivo.descrizione,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Surface(
-                color = if (obiettivo.completato) MaterialTheme.colorScheme.secondaryContainer
-                        else MaterialTheme.colorScheme.surfaceVariant,
-                shape = MaterialTheme.shapes.large
+                color =
+                    if (obiettivo.completato) {
+                        MaterialTheme.colorScheme.secondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+                shape = MaterialTheme.shapes.large,
             ) {
                 Text(
                     text = "+${obiettivo.premioXp} xp",
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = if (obiettivo.completato) MaterialTheme.colorScheme.onSecondaryContainer
-                            else MaterialTheme.colorScheme.onSurfaceVariant
+                    color =
+                        if (obiettivo.completato) {
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                 )
             }
         }

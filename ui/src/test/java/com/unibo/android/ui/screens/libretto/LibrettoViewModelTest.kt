@@ -32,7 +32,6 @@ import java.time.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class LibrettoViewModelTest {
-
     private val testDispatcher = UnconfinedTestDispatcher()
 
     private val getEsami: GetEsamiUseCase = mock()
@@ -81,102 +80,109 @@ class LibrettoViewModelTest {
     private val esami = listOf(esame1, esame2, esame3)
 
     @Test
-    fun `stato iniziale - ordine default per data DESC`() = runTest {
-        val vm = makeVm()
-        advanceUntilIdle()
+    fun `stato iniziale - ordine default per data DESC`() =
+        runTest {
+            val vm = makeVm()
+            advanceUntilIdle()
 
-        val lista = vm.esami.first()
-        assertEquals(esame2.id, lista[0].id) // 2025-03-15 più recente
-        assertEquals(esame3.id, lista[1].id) // 2025-02-05
-        assertEquals(esame1.id, lista[2].id) // 2025-01-10
-    }
-
-    @Test
-    fun `setSortBy VOTO - ordina per voto DESC`() = runTest {
-        val vm = makeVm()
-        advanceUntilIdle()
-
-        vm.setSortBy(SortBy.VOTO)
-        advanceUntilIdle()
-
-        val lista = vm.esami.first()
-        assertEquals(esame3.id, lista[0].id) // voto 30
-        assertEquals(esame1.id, lista[1].id) // voto 28
-        assertEquals(esame2.id, lista[2].id) // voto 24
-    }
+            val lista = vm.esami.first()
+            assertEquals(esame2.id, lista[0].id) // 2025-03-15 più recente
+            assertEquals(esame3.id, lista[1].id) // 2025-02-05
+            assertEquals(esame1.id, lista[2].id) // 2025-01-10
+        }
 
     @Test
-    fun `setSortBy CFU - ordina per CFU DESC`() = runTest {
-        val vm = makeVm()
-        advanceUntilIdle()
+    fun `setSortBy VOTO - ordina per voto DESC`() =
+        runTest {
+            val vm = makeVm()
+            advanceUntilIdle()
 
-        vm.setSortBy(SortBy.CFU)
-        advanceUntilIdle()
+            vm.setSortBy(SortBy.VOTO)
+            advanceUntilIdle()
 
-        val lista = vm.esami.first()
-        assertEquals(esame2.id, lista[0].id) // CFU 12
-        assertEquals(esame3.id, lista[1].id) // CFU 9
-        assertEquals(esame1.id, lista[2].id) // CFU 6
-    }
-
-    @Test
-    fun `toggleSortOrder - inverte da DESC ad ASC`() = runTest {
-        val vm = makeVm()
-        advanceUntilIdle()
-
-        vm.toggleSortOrder()
-        advanceUntilIdle()
-
-        assertEquals(SortOrder.ASC, vm.sortOrder.value)
-        val lista = vm.esami.first()
-        assertEquals(esame1.id, lista[0].id) // 2025-01-10 meno recente
-    }
+            val lista = vm.esami.first()
+            assertEquals(esame3.id, lista[0].id) // voto 30
+            assertEquals(esame1.id, lista[1].id) // voto 28
+            assertEquals(esame2.id, lista[2].id) // voto 24
+        }
 
     @Test
-    fun `addEsame - chiama refreshUserStats e refreshObiettivi dopo aggiunta`() = runTest {
-        whenever(addEsame(esame1)).thenReturn(Result.success(Unit))
-        whenever(runLeaderboardCheck()).thenReturn(Result.success(Unit))
-        val vm = makeVm()
-        advanceUntilIdle()
+    fun `setSortBy CFU - ordina per CFU DESC`() =
+        runTest {
+            val vm = makeVm()
+            advanceUntilIdle()
 
-        vm.addEsame(esame1)
-        advanceUntilIdle()
+            vm.setSortBy(SortBy.CFU)
+            advanceUntilIdle()
 
-        verify(addEsame)(esame1)
-        verify(refreshUserStats)()
-        verify(refreshObiettivi)()
-        verify(runLeaderboardCheck)()
-    }
-
-    @Test
-    fun `deleteEsame - chiama refreshUserStats e refreshObiettivi dopo eliminazione`() = runTest {
-        whenever(deleteEsame(esame1)).thenReturn(Result.success(Unit))
-        whenever(runLeaderboardCheck()).thenReturn(Result.success(Unit))
-        val vm = makeVm()
-        advanceUntilIdle()
-
-        vm.deleteEsame(esame1)
-        advanceUntilIdle()
-
-        verify(deleteEsame)(esame1)
-        verify(refreshUserStats)()
-        verify(refreshObiettivi)()
-        verify(runLeaderboardCheck)()
-    }
+            val lista = vm.esami.first()
+            assertEquals(esame2.id, lista[0].id) // CFU 12
+            assertEquals(esame3.id, lista[1].id) // CFU 9
+            assertEquals(esame1.id, lista[2].id) // CFU 6
+        }
 
     @Test
-    fun `updateEsame - chiama refreshUserStats e refreshObiettivi dopo aggiornamento`() = runTest {
-        whenever(updateEsame(esame1)).thenReturn(Result.success(Unit))
-        whenever(runLeaderboardCheck()).thenReturn(Result.success(Unit))
-        val vm = makeVm()
-        advanceUntilIdle()
+    fun `toggleSortOrder - inverte da DESC ad ASC`() =
+        runTest {
+            val vm = makeVm()
+            advanceUntilIdle()
 
-        vm.updateEsame(esame1)
-        advanceUntilIdle()
+            vm.toggleSortOrder()
+            advanceUntilIdle()
 
-        verify(updateEsame)(esame1)
-        verify(refreshUserStats)()
-        verify(refreshObiettivi)()
-        verify(runLeaderboardCheck)()
-    }
+            assertEquals(SortOrder.ASC, vm.sortOrder.value)
+            val lista = vm.esami.first()
+            assertEquals(esame1.id, lista[0].id) // 2025-01-10 meno recente
+        }
+
+    @Test
+    fun `addEsame - chiama refreshUserStats e refreshObiettivi dopo aggiunta`() =
+        runTest {
+            whenever(addEsame(esame1)).thenReturn(Result.success(Unit))
+            whenever(runLeaderboardCheck()).thenReturn(Result.success(Unit))
+            val vm = makeVm()
+            advanceUntilIdle()
+
+            vm.addEsame(esame1)
+            advanceUntilIdle()
+
+            verify(addEsame)(esame1)
+            verify(refreshUserStats)()
+            verify(refreshObiettivi)()
+            verify(runLeaderboardCheck)()
+        }
+
+    @Test
+    fun `deleteEsame - chiama refreshUserStats e refreshObiettivi dopo eliminazione`() =
+        runTest {
+            whenever(deleteEsame(esame1)).thenReturn(Result.success(Unit))
+            whenever(runLeaderboardCheck()).thenReturn(Result.success(Unit))
+            val vm = makeVm()
+            advanceUntilIdle()
+
+            vm.deleteEsame(esame1)
+            advanceUntilIdle()
+
+            verify(deleteEsame)(esame1)
+            verify(refreshUserStats)()
+            verify(refreshObiettivi)()
+            verify(runLeaderboardCheck)()
+        }
+
+    @Test
+    fun `updateEsame - chiama refreshUserStats e refreshObiettivi dopo aggiornamento`() =
+        runTest {
+            whenever(updateEsame(esame1)).thenReturn(Result.success(Unit))
+            whenever(runLeaderboardCheck()).thenReturn(Result.success(Unit))
+            val vm = makeVm()
+            advanceUntilIdle()
+
+            vm.updateEsame(esame1)
+            advanceUntilIdle()
+
+            verify(updateEsame)(esame1)
+            verify(refreshUserStats)()
+            verify(refreshObiettivi)()
+            verify(runLeaderboardCheck)()
+        }
 }

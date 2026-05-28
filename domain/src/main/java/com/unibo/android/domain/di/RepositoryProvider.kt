@@ -8,8 +8,12 @@ import com.unibo.android.domain.repository.SettingsRepository
 
 interface RepositoryProvider {
     fun getEsameRepository(): EsameRepository
+
     fun getObiettivoRepository(): ObiettivoRepository
+
     fun getAuthRepository(): AuthRepository
+
     fun getSettingsRepository(): SettingsRepository
+
     fun getGamificationRepository(): GamificationRepository
 }

@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 
 class GetStatisticheUseCase(
-    private val repository: EsameRepository
+    private val repository: EsameRepository,
 ) {
     /**
      * Flusso reattivo: si aggiorna automaticamente a ogni modifica degli esami in Room.

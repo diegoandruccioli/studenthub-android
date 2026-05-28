@@ -13,15 +13,16 @@ import kotlinx.coroutines.flow.map
 private val Context.sessionDataStore: DataStore<Preferences> by preferencesDataStore(name = "session")
 
 class SessionDataStore(private val context: Context) {
-
     private val IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
     private val USER_ID = intPreferencesKey("user_id")
 
-    val isLoggedIn: Flow<Boolean> = context.sessionDataStore.data
-        .map { prefs -> prefs[IS_LOGGED_IN] ?: false }
+    val isLoggedIn: Flow<Boolean> =
+        context.sessionDataStore.data
+            .map { prefs -> prefs[IS_LOGGED_IN] ?: false }
 
-    val userId: Flow<Int> = context.sessionDataStore.data
-        .map { prefs -> prefs[USER_ID] ?: 0 }
+    val userId: Flow<Int> =
+        context.sessionDataStore.data
+            .map { prefs -> prefs[USER_ID] ?: 0 }
 
     suspend fun setLoggedIn(value: Boolean) {
         context.sessionDataStore.edit { prefs -> prefs[IS_LOGGED_IN] = value }

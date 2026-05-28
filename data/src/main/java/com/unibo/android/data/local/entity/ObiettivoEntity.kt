@@ -10,5 +10,5 @@ data class ObiettivoEntity(
     @ColumnInfo(name = "nome") val nome: String,
     @ColumnInfo(name = "descrizione") val descrizione: String,
     @ColumnInfo(name = "completato") val completato: Boolean,
-    @ColumnInfo(name = "premio_xp") val premioXp: Int
+    @ColumnInfo(name = "premio_xp") val premioXp: Int,
 )

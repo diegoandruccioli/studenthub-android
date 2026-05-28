@@ -5,7 +5,7 @@ import com.unibo.android.domain.repository.ObiettivoRepository
 import kotlinx.coroutines.flow.Flow
 
 class GetObiettiviUseCase(
-    private val repository: ObiettivoRepository
+    private val repository: ObiettivoRepository,
 ) {
     operator fun invoke(): Flow<List<Obiettivo>> = repository.getObiettivi()
 }

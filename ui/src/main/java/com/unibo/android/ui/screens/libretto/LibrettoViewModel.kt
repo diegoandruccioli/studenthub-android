@@ -15,8 +15,8 @@ import com.unibo.android.domain.usecase.GetEsamiUseCase
 import com.unibo.android.domain.usecase.GetSettingsUseCase
 import com.unibo.android.domain.usecase.ObserveSettingsUseCase
 import com.unibo.android.domain.usecase.RefreshEsamiUseCase
-import com.unibo.android.domain.usecase.RefreshUserStatsUseCase
 import com.unibo.android.domain.usecase.RefreshObiettiviUseCase
+import com.unibo.android.domain.usecase.RefreshUserStatsUseCase
 import com.unibo.android.domain.usecase.RunLeaderboardCheckUseCase
 import com.unibo.android.domain.usecase.UpdateEsameUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 enum class SortBy { DATA, VOTO, CFU }
+
 enum class SortOrder { ASC, DESC }
 
 class LibrettoViewModel(
@@ -43,29 +44,31 @@ class LibrettoViewModel(
     private val getSettingsUseCase: GetSettingsUseCase,
     private val runLeaderboardCheckUseCase: RunLeaderboardCheckUseCase,
 ) : ViewModel() {
-
     private val _sortBy = MutableStateFlow(SortBy.DATA)
     val sortBy: StateFlow<SortBy> = _sortBy.asStateFlow()
 
     private val _sortOrder = MutableStateFlow(SortOrder.DESC)
     val sortOrder: StateFlow<SortOrder> = _sortOrder.asStateFlow()
 
-    val esami: StateFlow<List<Esame>> = combine(
-        getEsamiUseCase(),
-        _sortBy,
-        _sortOrder
-    ) { lista, by, order ->
-        val sorted = when (by) {
-            SortBy.DATA -> lista.sortedBy { it.dataEsame }
-            SortBy.VOTO -> lista.sortedBy { it.voto }
-            SortBy.CFU -> lista.sortedBy { it.cfu }
-        }
-        if (order == SortOrder.DESC) sorted.reversed() else sorted
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val esami: StateFlow<List<Esame>> =
+        combine(
+            getEsamiUseCase(),
+            _sortBy,
+            _sortOrder,
+        ) { lista, by, order ->
+            val sorted =
+                when (by) {
+                    SortBy.DATA -> lista.sortedBy { it.dataEsame }
+                    SortBy.VOTO -> lista.sortedBy { it.voto }
+                    SortBy.CFU -> lista.sortedBy { it.cfu }
+                }
+            if (order == SortOrder.DESC) sorted.reversed() else sorted
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    val settings: StateFlow<Settings> = observeSettingsUseCase()
-        .filterNotNull()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, Settings("DEFAULT", 18, 27))
+    val settings: StateFlow<Settings> =
+        observeSettingsUseCase()
+            .filterNotNull()
+            .stateIn(viewModelScope, SharingStarted.Eagerly, Settings("DEFAULT", 18, 27))
 
     init {
         // Carica settings dal server al login/reinstall: popola DataStore in modo che
@@ -78,7 +81,9 @@ class LibrettoViewModel(
         viewModelScope.launch { refreshEsamiUseCase() }
     }
 
-    fun setSortBy(sortBy: SortBy) { _sortBy.value = sortBy }
+    fun setSortBy(sortBy: SortBy) {
+        _sortBy.value = sortBy
+    }
 
     fun toggleSortOrder() {
         _sortOrder.value = if (_sortOrder.value == SortOrder.DESC) SortOrder.ASC else SortOrder.DESC
@@ -95,7 +100,7 @@ class LibrettoViewModel(
             }
         }
     }
- 
+
     fun updateEsame(esame: Esame) {
         viewModelScope.launch {
             val result = updateEsameUseCase(esame)
@@ -106,7 +111,7 @@ class LibrettoViewModel(
             }
         }
     }
- 
+
     fun deleteEsame(esame: Esame) {
         viewModelScope.launch {
             val result = deleteEsameUseCase(esame)
@@ -124,20 +129,22 @@ class LibrettoViewModel(
             gamificationRepository: GamificationRepository,
             obiettivoRepository: ObiettivoRepository,
             settingsRepository: SettingsRepository,
-        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T = LibrettoViewModel(
-                getEsamiUseCase = GetEsamiUseCase(esameRepository),
-                addEsameUseCase = AddEsameUseCase(esameRepository),
-                updateEsameUseCase = UpdateEsameUseCase(esameRepository),
-                deleteEsameUseCase = DeleteEsameUseCase(esameRepository),
-                refreshEsamiUseCase = RefreshEsamiUseCase(esameRepository),
-                refreshUserStatsUseCase = RefreshUserStatsUseCase(gamificationRepository),
-                refreshObiettiviUseCase = RefreshObiettiviUseCase(obiettivoRepository),
-                observeSettingsUseCase = ObserveSettingsUseCase(settingsRepository),
-                getSettingsUseCase = GetSettingsUseCase(settingsRepository),
-                runLeaderboardCheckUseCase = RunLeaderboardCheckUseCase(gamificationRepository),
-            ) as T
-        }
+        ): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                    LibrettoViewModel(
+                        getEsamiUseCase = GetEsamiUseCase(esameRepository),
+                        addEsameUseCase = AddEsameUseCase(esameRepository),
+                        updateEsameUseCase = UpdateEsameUseCase(esameRepository),
+                        deleteEsameUseCase = DeleteEsameUseCase(esameRepository),
+                        refreshEsamiUseCase = RefreshEsamiUseCase(esameRepository),
+                        refreshUserStatsUseCase = RefreshUserStatsUseCase(gamificationRepository),
+                        refreshObiettiviUseCase = RefreshObiettiviUseCase(obiettivoRepository),
+                        observeSettingsUseCase = ObserveSettingsUseCase(settingsRepository),
+                        getSettingsUseCase = GetSettingsUseCase(settingsRepository),
+                        runLeaderboardCheckUseCase = RunLeaderboardCheckUseCase(gamificationRepository),
+                    ) as T
+            }
     }
 }

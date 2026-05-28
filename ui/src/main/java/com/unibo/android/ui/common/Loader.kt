@@ -12,7 +12,7 @@ import androidx.compose.ui.tooling.preview.Preview
 fun Loader(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         CircularProgressIndicator()
     }

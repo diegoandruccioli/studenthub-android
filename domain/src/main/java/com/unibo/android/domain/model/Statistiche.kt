@@ -6,11 +6,11 @@ data class Statistiche(
     val mediaPonderata: Double,
     val cfuSostenuti: Int,
     val baseLaurea: Double,
-    val andamentoCarriera: List<PuntoAndamento>
+    val andamentoCarriera: List<PuntoAndamento>,
 )
 
 data class PuntoAndamento(
     val data: LocalDate,
     val voto: Int,
-    val mediaPonderataProgressiva: Double
+    val mediaPonderataProgressiva: Double,
 )

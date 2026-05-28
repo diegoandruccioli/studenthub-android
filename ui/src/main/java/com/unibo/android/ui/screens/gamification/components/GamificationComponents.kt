@@ -36,50 +36,52 @@ fun XpBar(
     levelTitle: String,
     xpLabel: String,
     progressPercentage: Float,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            ),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column {
                     Text(
                         text = "Livello $level",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                     Text(
                         text = levelTitle,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Text(
                     text = xpLabel,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
 
             LinearProgressIndicator(
                 progress = { progressPercentage },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(10.dp)
-                    .clip(CircleShape),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(10.dp)
+                        .clip(CircleShape),
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
             )
@@ -94,41 +96,45 @@ fun XpBar(
 fun LeaderboardItem(
     entry: LeaderboardEntry,
     rank: Int,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
-    val backgroundColor = if (entry.isMe) {
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-    } else {
-        Color.Transparent
-    }
+    val backgroundColor =
+        if (entry.isMe) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+        } else {
+            Color.Transparent
+        }
 
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(backgroundColor, RoundedCornerShape(12.dp))
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .background(backgroundColor, RoundedCornerShape(12.dp))
+                .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         // Posizione in classifica
         Box(
-            modifier = Modifier
-                .size(32.dp)
-                .background(
-                    color = when (rank) {
-                        1 -> Color(0xFFFFD700) // Gold
-                        2 -> Color(0xFFC0C0C0) // Silver
-                        3 -> Color(0xFFCD7F32) // Bronze
-                        else -> MaterialTheme.colorScheme.surfaceVariant
-                    },
-                    shape = CircleShape
-                ),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .size(32.dp)
+                    .background(
+                        color =
+                            when (rank) {
+                                1 -> Color(0xFFFFD700) // Gold
+                                2 -> Color(0xFFC0C0C0) // Silver
+                                3 -> Color(0xFFCD7F32) // Bronze
+                                else -> MaterialTheme.colorScheme.surfaceVariant
+                            },
+                        shape = CircleShape,
+                    ),
+            contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = rank.toString(),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
-                color = if (rank <= 3) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (rank <= 3) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
@@ -139,7 +145,7 @@ fun LeaderboardItem(
             text = "${entry.nome} ${entry.cognome}",
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = if (entry.isMe) FontWeight.Bold else FontWeight.Normal,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         )
 
         // XP Totali
@@ -147,7 +153,7 @@ fun LeaderboardItem(
             text = "${entry.xpTotali} XP",
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
         )
     }
 }

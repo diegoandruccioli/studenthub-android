@@ -10,7 +10,6 @@ class LeaderboardCheckWorker(
     appContext: Context,
     workerParams: WorkerParameters,
 ) : CoroutineWorker(appContext, workerParams) {
-
     private val rankDataStore = RankDataStore(appContext)
     private val repository = GamificationRepositoryImpl(appContext)
 

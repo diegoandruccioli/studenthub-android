@@ -18,9 +18,8 @@ private const val TAG = "ObiettivoRepository"
 
 class ObiettivoRepositoryImpl(
     private val obiettivoDao: ObiettivoDao,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ObiettivoRepository {
-
     private val api = NetworkClient.gamificationApiService
 
     override fun getObiettivi(): Flow<List<Obiettivo>> =
@@ -28,44 +27,47 @@ class ObiettivoRepositoryImpl(
             .map { list -> list.map { it.toDomain() } }
             .flowOn(ioDispatcher)
 
-    override suspend fun refreshObiettivi(): Result<Unit> = withContext(ioDispatcher) {
-        Log.d(TAG, "refreshObiettivi → GET /gamification/badges + my-badges...")
-        runCatching {
-            // GET /gamification/badges → catalogo completo (nessun dato utente)
-            val allBadgesResponse = api.getBadges()
-            if (!allBadgesResponse.isSuccessful) {
-                throw Exception("getBadges HTTP ${allBadgesResponse.code()}")
-            }
-            val allBadges = allBadgesResponse.body() ?: emptyList()
-            Log.d(TAG, "refreshObiettivi → ${allBadges.size} badge dal catalogo")
+    override suspend fun refreshObiettivi(): Result<Unit> =
+        withContext(ioDispatcher) {
+            Log.d(TAG, "refreshObiettivi → GET /gamification/badges + my-badges...")
+            runCatching {
+                // GET /gamification/badges → catalogo completo (nessun dato utente)
+                val allBadgesResponse = api.getBadges()
+                if (!allBadgesResponse.isSuccessful) {
+                    throw Exception("getBadges HTTP ${allBadgesResponse.code()}")
+                }
+                val allBadges = allBadgesResponse.body() ?: emptyList()
+                Log.d(TAG, "refreshObiettivi → ${allBadges.size} badge dal catalogo")
 
-            // GET /gamification/my-badges → solo badge sbloccati dall'utente
-            val myBadgesResponse = api.getMyBadges()
-            val completedIds: Set<Int> = if (myBadgesResponse.isSuccessful) {
-                myBadgesResponse.body()?.map { it.safeId }?.toSet() ?: emptySet()
-            } else {
-                Log.w(TAG, "refreshObiettivi → my-badges HTTP ${myBadgesResponse.code()}, completati=0")
-                emptySet()
-            }
-            Log.d(TAG, "refreshObiettivi → ${completedIds.size} badge completati dall'utente")
+                // GET /gamification/my-badges → solo badge sbloccati dall'utente
+                val myBadgesResponse = api.getMyBadges()
+                val completedIds: Set<Int> =
+                    if (myBadgesResponse.isSuccessful) {
+                        myBadgesResponse.body()?.map { it.safeId }?.toSet() ?: emptySet()
+                    } else {
+                        Log.w(TAG, "refreshObiettivi → my-badges HTTP ${myBadgesResponse.code()}, completati=0")
+                        emptySet()
+                    }
+                Log.d(TAG, "refreshObiettivi → ${completedIds.size} badge completati dall'utente")
 
-            // Merge: catalogo + stato completamento utente
-            val entities = allBadges.map { dto ->
-                ObiettivoEntity(
-                    id = dto.safeId,
-                    nome = dto.nome,
-                    descrizione = dto.descrizione,
-                    completato = dto.safeId in completedIds,
-                    premioXp = dto.xpValore
-                )
-            }
+                // Merge: catalogo + stato completamento utente
+                val entities =
+                    allBadges.map { dto ->
+                        ObiettivoEntity(
+                            id = dto.safeId,
+                            nome = dto.nome,
+                            descrizione = dto.descrizione,
+                            completato = dto.safeId in completedIds,
+                            premioXp = dto.xpValore,
+                        )
+                    }
 
-            if (entities.isNotEmpty()) {
-                obiettivoDao.insertAll(entities)
-                Log.d(TAG, "refreshObiettivi → ${entities.size} obiettivi salvati in Room")
+                if (entities.isNotEmpty()) {
+                    obiettivoDao.insertAll(entities)
+                    Log.d(TAG, "refreshObiettivi → ${entities.size} obiettivi salvati in Room")
+                }
+            }.onFailure { e ->
+                Log.e(TAG, "refreshObiettivi → fallito (Room invariata): ${e.message}", e)
             }
-        }.onFailure { e ->
-            Log.e(TAG, "refreshObiettivi → fallito (Room invariata): ${e.message}", e)
         }
-    }
 }

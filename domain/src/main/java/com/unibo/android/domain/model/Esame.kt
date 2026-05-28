@@ -8,5 +8,5 @@ data class Esame(
     val voto: Int,
     val lode: Boolean,
     val cfu: Int,
-    val dataEsame: LocalDate
+    val dataEsame: LocalDate,
 )

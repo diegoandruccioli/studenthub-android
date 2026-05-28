@@ -11,5 +11,5 @@ data class LeaderboardEntity(
     @PrimaryKey val userId: Int,
     val nome: String,
     val cognome: String,
-    val xpTotali: Int
+    val xpTotali: Int,
 )

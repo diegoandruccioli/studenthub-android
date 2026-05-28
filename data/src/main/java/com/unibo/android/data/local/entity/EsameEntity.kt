@@ -3,7 +3,6 @@ package com.unibo.android.data.local.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-
 import java.time.LocalDate
 
 @Entity(tableName = "esami")
@@ -17,5 +16,5 @@ data class EsameEntity(
     @ColumnInfo(name = "remote_id") val remoteId: Int? = null,
     @ColumnInfo(name = "pending_sync") val pendingSync: Boolean = true,
     /** true = delete remoto pendente; l'esame è nascosto in UI ma ancora in Room per retry */
-    @ColumnInfo(name = "pending_delete") val pendingDelete: Boolean = false
+    @ColumnInfo(name = "pending_delete") val pendingDelete: Boolean = false,
 )

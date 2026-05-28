@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.map
 private val Context.rankDataStore: DataStore<Preferences> by preferencesDataStore(name = "rank")
 
 class RankDataStore(private val context: Context) {
-
     private val CURRENT_XP = intPreferencesKey("current_xp")
     private val CURRENT_RANK = intPreferencesKey("current_rank")
     private val CURRENT_LEVEL = intPreferencesKey("current_level")

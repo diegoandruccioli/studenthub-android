@@ -34,10 +34,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.unibo.android.domain.di.RepositoryProvider
 import com.unibo.android.domain.usecase.GetObiettiviUseCase
-import com.unibo.android.domain.usecase.RefreshObiettiviUseCase
 import com.unibo.android.domain.usecase.GetSettingsUseCase
 import com.unibo.android.domain.usecase.GetStatisticheUseCase
 import com.unibo.android.domain.usecase.LogoutUseCase
+import com.unibo.android.domain.usecase.RefreshObiettiviUseCase
 import com.unibo.android.domain.usecase.UpdateSettingsUseCase
 import com.unibo.android.ui.screens.auth.AuthViewModel
 import com.unibo.android.ui.screens.auth.LoginScreen
@@ -70,33 +70,36 @@ class MainActivity : ComponentActivity() {
 fun RootNavigation() {
     val context = LocalContext.current
     val authRepository = (context.applicationContext as RepositoryProvider).getAuthRepository()
-    val authViewModel: AuthViewModel = viewModel(
-        factory = AuthViewModel.provideFactory(authRepository)
-    )
+    val authViewModel: AuthViewModel =
+        viewModel(
+            factory = AuthViewModel.provideFactory(authRepository),
+        )
     val sessionState by authViewModel.sessionState.collectAsStateWithLifecycle()
     var showRegister by rememberSaveable { mutableStateOf(false) }
 
     when (sessionState) {
-        null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
-        false -> if (showRegister) {
-            RegisterScreen(
-                viewModel = authViewModel,
-                onNavigateToLogin = {
-                    authViewModel.resetState()
-                    showRegister = false
-                }
-            )
-        } else {
-            LoginScreen(
-                viewModel = authViewModel,
-                onNavigateToRegister = {
-                    authViewModel.resetState()
-                    showRegister = true
-                }
-            )
-        }
+        null ->
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        false ->
+            if (showRegister) {
+                RegisterScreen(
+                    viewModel = authViewModel,
+                    onNavigateToLogin = {
+                        authViewModel.resetState()
+                        showRegister = false
+                    },
+                )
+            } else {
+                LoginScreen(
+                    viewModel = authViewModel,
+                    onNavigateToRegister = {
+                        authViewModel.resetState()
+                        showRegister = true
+                    },
+                )
+            }
         true -> StudentHubApp()
     }
 }
@@ -113,38 +116,47 @@ fun StudentHubApp() {
     val authRepository = repositoryProvider.getAuthRepository()
     val gamificationRepository = repositoryProvider.getGamificationRepository()
 
-    val gamificationViewModel: GamificationViewModel = viewModel(
-        factory = GamificationViewModel.provideFactory(gamificationRepository)
-    )
-
-    val librettoViewModel: LibrettoViewModel = viewModel(
-        factory = LibrettoViewModel.provideFactory(esameRepository, gamificationRepository, obiettivoRepository, settingsRepository)
-    )
-
-    val statisticheViewModel: StatisticheViewModel = viewModel(
-        factory = StatisticheViewModel.provideFactory(
-            getStatisticheUseCase = GetStatisticheUseCase(
-                repository = esameRepository
-            ),
-            locale = Locale.getDefault()
+    val gamificationViewModel: GamificationViewModel =
+        viewModel(
+            factory = GamificationViewModel.provideFactory(gamificationRepository),
         )
-    )
 
-    val obiettiviViewModel: ObiettiviViewModel = viewModel(
-        factory = ObiettiviViewModel.provideFactory(
-            getObiettiviUseCase = GetObiettiviUseCase(obiettivoRepository),
-            refreshObiettiviUseCase = RefreshObiettiviUseCase(obiettivoRepository)
+    val librettoViewModel: LibrettoViewModel =
+        viewModel(
+            factory = LibrettoViewModel.provideFactory(esameRepository, gamificationRepository, obiettivoRepository, settingsRepository),
         )
-    )
 
-    val profiloViewModel: ProfiloViewModel = viewModel(
-        factory = ProfiloViewModel.provideFactory(
-            getSettingsUseCase = GetSettingsUseCase(settingsRepository),
-            updateSettingsUseCase = UpdateSettingsUseCase(settingsRepository),
-            logoutUseCase = LogoutUseCase(authRepository),
-            settingsRepository = settingsRepository
+    val statisticheViewModel: StatisticheViewModel =
+        viewModel(
+            factory =
+                StatisticheViewModel.provideFactory(
+                    getStatisticheUseCase =
+                        GetStatisticheUseCase(
+                            repository = esameRepository,
+                        ),
+                    locale = Locale.getDefault(),
+                ),
         )
-    )
+
+    val obiettiviViewModel: ObiettiviViewModel =
+        viewModel(
+            factory =
+                ObiettiviViewModel.provideFactory(
+                    getObiettiviUseCase = GetObiettiviUseCase(obiettivoRepository),
+                    refreshObiettiviUseCase = RefreshObiettiviUseCase(obiettivoRepository),
+                ),
+        )
+
+    val profiloViewModel: ProfiloViewModel =
+        viewModel(
+            factory =
+                ProfiloViewModel.provideFactory(
+                    getSettingsUseCase = GetSettingsUseCase(settingsRepository),
+                    updateSettingsUseCase = UpdateSettingsUseCase(settingsRepository),
+                    logoutUseCase = LogoutUseCase(authRepository),
+                    settingsRepository = settingsRepository,
+                ),
+        )
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
@@ -153,31 +165,35 @@ fun StudentHubApp() {
                     icon = { Icon(destination.icon, contentDescription = destination.label) },
                     label = { Text(destination.label) },
                     selected = destination == currentDestination,
-                    onClick = { currentDestination = destination }
+                    onClick = { currentDestination = destination },
                 )
             }
-        }
+        },
     ) {
         Scaffold(contentWindowInsets = WindowInsets.statusBars) { innerPadding ->
             when (currentDestination) {
-                AppDestinations.LIBRETTO -> LibrettoScreen(
-                    viewModel = librettoViewModel,
-                    gamificationViewModel = gamificationViewModel,
-                    modifier = Modifier.padding(innerPadding)
-                )
-                AppDestinations.STATISTICHE -> StatisticheScreen(
-                    viewModel = statisticheViewModel,
-                    modifier = Modifier.padding(innerPadding)
-                )
-                AppDestinations.OBIETTIVI -> ObiettiviScreen(
-                    viewModel = obiettiviViewModel,
-                    gamificationViewModel = gamificationViewModel,
-                    modifier = Modifier.padding(innerPadding)
-                )
-                AppDestinations.PROFILO -> ProfiloScreen(
-                    viewModel = profiloViewModel,
-                    modifier = Modifier.padding(innerPadding)
-                )
+                AppDestinations.LIBRETTO ->
+                    LibrettoScreen(
+                        viewModel = librettoViewModel,
+                        gamificationViewModel = gamificationViewModel,
+                        modifier = Modifier.padding(innerPadding),
+                    )
+                AppDestinations.STATISTICHE ->
+                    StatisticheScreen(
+                        viewModel = statisticheViewModel,
+                        modifier = Modifier.padding(innerPadding),
+                    )
+                AppDestinations.OBIETTIVI ->
+                    ObiettiviScreen(
+                        viewModel = obiettiviViewModel,
+                        gamificationViewModel = gamificationViewModel,
+                        modifier = Modifier.padding(innerPadding),
+                    )
+                AppDestinations.PROFILO ->
+                    ProfiloScreen(
+                        viewModel = profiloViewModel,
+                        modifier = Modifier.padding(innerPadding),
+                    )
             }
         }
     }
@@ -202,18 +218,18 @@ private fun StudentHubNavigationPreview() {
                         icon = { Icon(destination.icon, contentDescription = destination.label) },
                         label = { Text(destination.label) },
                         selected = destination == currentDestination,
-                        onClick = { currentDestination = destination }
+                        onClick = { currentDestination = destination },
                     )
                 }
-            }
+            },
         ) {
             Box(
                 modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = currentDestination.label,
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge,
                 )
             }
         }

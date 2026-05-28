@@ -8,6 +8,6 @@ class RegisterUseCase(private val repository: AuthRepository) {
         nome: String,
         cognome: String,
         email: String,
-        password: String
+        password: String,
     ): Result<User> = repository.register(nome, cognome, email, password)
 }

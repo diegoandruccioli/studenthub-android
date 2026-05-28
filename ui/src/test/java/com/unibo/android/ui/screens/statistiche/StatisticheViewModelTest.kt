@@ -1,6 +1,5 @@
 package com.unibo.android.ui.screens.statistiche
 
-import com.unibo.android.domain.model.Esame
 import com.unibo.android.domain.model.PuntoAndamento
 import com.unibo.android.domain.model.Statistiche
 import com.unibo.android.domain.usecase.GetStatisticheUseCase
@@ -25,7 +24,6 @@ import java.util.Locale
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class StatisticheViewModelTest {
-
     private val testDispatcher = StandardTestDispatcher()
     private val useCase: GetStatisticheUseCase = mock()
 
@@ -40,65 +38,71 @@ class StatisticheViewModelTest {
     }
 
     @Test
-    fun `stato iniziale Loading`() = runTest {
-        whenever(useCase()).thenReturn(flowOf(Result.success(statisticheVuote())))
+    fun `stato iniziale Loading`() =
+        runTest {
+            whenever(useCase()).thenReturn(flowOf(Result.success(statisticheVuote())))
 
-        val vm = StatisticheViewModel(useCase, Locale.ITALY)
+            val vm = StatisticheViewModel(useCase, Locale.ITALY)
 
-        assertEquals(StatisticheUiState.Loading, vm.uiState.value)
-    }
-
-    @Test
-    fun `nessun esame - stato diventa Empty`() = runTest {
-        whenever(useCase()).thenReturn(flowOf(Result.success(statisticheVuote())))
-
-        val vm = StatisticheViewModel(useCase, Locale.ITALY)
-        // Subscribe per triggerare WhileSubscribed(5000)
-        val job = launch { vm.uiState.collect {} }
-        advanceUntilIdle()
-
-        assertEquals(StatisticheUiState.Empty, vm.uiState.value)
-        job.cancel()
-    }
+            assertEquals(StatisticheUiState.Loading, vm.uiState.value)
+        }
 
     @Test
-    fun `esami presenti - stato diventa Success con dati corretti`() = runTest {
-        val stats = Statistiche(
-            mediaPonderata = 27.5,
-            cfuSostenuti = 12,
-            baseLaurea = 100.83,
-            andamentoCarriera = listOf(
-                PuntoAndamento(LocalDate.of(2025, 1, 10), voto = 25, mediaPonderataProgressiva = 25.0),
-                PuntoAndamento(LocalDate.of(2025, 2, 15), voto = 30, mediaPonderataProgressiva = 27.5)
-            )
-        )
-        whenever(useCase()).thenReturn(flowOf(Result.success(stats)))
+    fun `nessun esame - stato diventa Empty`() =
+        runTest {
+            whenever(useCase()).thenReturn(flowOf(Result.success(statisticheVuote())))
 
-        val vm = StatisticheViewModel(useCase, Locale.ITALY)
-        val job = launch { vm.uiState.collect {} }
-        advanceUntilIdle()
+            val vm = StatisticheViewModel(useCase, Locale.ITALY)
+            // Subscribe per triggerare WhileSubscribed(5000)
+            val job = launch { vm.uiState.collect {} }
+            advanceUntilIdle()
 
-        val state = vm.uiState.value
-        assertTrue(state is StatisticheUiState.Success)
-        val uiModel = (state as StatisticheUiState.Success).uiModel
-        assertEquals("27,5", uiModel.mediaPonderata)
-        assertEquals("12", uiModel.cfuSostenuti)
-        job.cancel()
-    }
+            assertEquals(StatisticheUiState.Empty, vm.uiState.value)
+            job.cancel()
+        }
 
     @Test
-    fun `errore dal use case - stato diventa Error`() = runTest {
-        whenever(useCase()).thenReturn(flowOf(Result.failure(Exception("Errore DB"))))
+    fun `esami presenti - stato diventa Success con dati corretti`() =
+        runTest {
+            val stats =
+                Statistiche(
+                    mediaPonderata = 27.5,
+                    cfuSostenuti = 12,
+                    baseLaurea = 100.83,
+                    andamentoCarriera =
+                        listOf(
+                            PuntoAndamento(LocalDate.of(2025, 1, 10), voto = 25, mediaPonderataProgressiva = 25.0),
+                            PuntoAndamento(LocalDate.of(2025, 2, 15), voto = 30, mediaPonderataProgressiva = 27.5),
+                        ),
+                )
+            whenever(useCase()).thenReturn(flowOf(Result.success(stats)))
 
-        val vm = StatisticheViewModel(useCase, Locale.ITALY)
-        val job = launch { vm.uiState.collect {} }
-        advanceUntilIdle()
+            val vm = StatisticheViewModel(useCase, Locale.ITALY)
+            val job = launch { vm.uiState.collect {} }
+            advanceUntilIdle()
 
-        val state = vm.uiState.value
-        assertTrue(state is StatisticheUiState.Error)
-        assertEquals("Errore DB", (state as StatisticheUiState.Error).message)
-        job.cancel()
-    }
+            val state = vm.uiState.value
+            assertTrue(state is StatisticheUiState.Success)
+            val uiModel = (state as StatisticheUiState.Success).uiModel
+            assertEquals("27,5", uiModel.mediaPonderata)
+            assertEquals("12", uiModel.cfuSostenuti)
+            job.cancel()
+        }
+
+    @Test
+    fun `errore dal use case - stato diventa Error`() =
+        runTest {
+            whenever(useCase()).thenReturn(flowOf(Result.failure(Exception("Errore DB"))))
+
+            val vm = StatisticheViewModel(useCase, Locale.ITALY)
+            val job = launch { vm.uiState.collect {} }
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertTrue(state is StatisticheUiState.Error)
+            assertEquals("Errore DB", (state as StatisticheUiState.Error).message)
+            job.cancel()
+        }
 
     private fun statisticheVuote() = Statistiche(0.0, 0, 0.0, emptyList())
 }

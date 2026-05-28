@@ -5,5 +5,5 @@ data class LeaderboardEntry(
     val nome: String,
     val cognome: String,
     val xpTotali: Int,
-    val isMe: Boolean = false
+    val isMe: Boolean = false,
 )

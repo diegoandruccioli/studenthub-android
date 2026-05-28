@@ -13,101 +13,118 @@ import org.junit.Test
 import java.time.LocalDate
 
 class GetStatisticheUseCaseTest {
-
     // Fake evita Mockito + Kotlin Result<T> value class null-unboxing crash
-    private val fakeRepo = object : EsameRepository {
-        var esami: List<Esame> = emptyList()
+    private val fakeRepo =
+        object : EsameRepository {
+            var esami: List<Esame> = emptyList()
 
-        override fun getEsami(): Flow<List<Esame>> = flowOf(esami)
-        override suspend fun addEsame(esame: Esame): Result<Unit> = Result.success(Unit)
-        override suspend fun updateEsame(esame: Esame): Result<Unit> = Result.success(Unit)
-        override suspend fun deleteEsame(esame: Esame): Result<Unit> = Result.success(Unit)
-        override suspend fun refreshEsami() {}
-        override suspend fun getStatisticheRemote(): Result<Statistiche> =
-            Result.failure(Exception("offline"))
-        override val totalXpFlow: Flow<Int> = flowOf(0)
-    }
+            override fun getEsami(): Flow<List<Esame>> = flowOf(esami)
+
+            override suspend fun addEsame(esame: Esame): Result<Unit> = Result.success(Unit)
+
+            override suspend fun updateEsame(esame: Esame): Result<Unit> = Result.success(Unit)
+
+            override suspend fun deleteEsame(esame: Esame): Result<Unit> = Result.success(Unit)
+
+            override suspend fun refreshEsami() {}
+
+            override suspend fun getStatisticheRemote(): Result<Statistiche> = Result.failure(Exception("offline"))
+
+            override val totalXpFlow: Flow<Int> = flowOf(0)
+        }
 
     private val useCase = GetStatisticheUseCase(fakeRepo)
 
-    private fun esame(voto: Int, cfu: Int, data: LocalDate) =
-        Esame(nome = "Materia", voto = voto, lode = false, cfu = cfu, dataEsame = data)
+    private fun esame(
+        voto: Int,
+        cfu: Int,
+        data: LocalDate,
+    ) = Esame(nome = "Materia", voto = voto, lode = false, cfu = cfu, dataEsame = data)
 
     @Test
-    fun `lista vuota restituisce statistiche a zero`() = runTest {
-        fakeRepo.esami = emptyList()
+    fun `lista vuota restituisce statistiche a zero`() =
+        runTest {
+            fakeRepo.esami = emptyList()
 
-        val result = useCase().first()
-        val stats = result.getOrThrow()
+            val result = useCase().first()
+            val stats = result.getOrThrow()
 
-        assertEquals(0.0, stats.mediaPonderata, 0.001)
-        assertEquals(0, stats.cfuSostenuti)
-        assertEquals(0.0, stats.baseLaurea, 0.001)
-        assertTrue(stats.andamentoCarriera.isEmpty())
-    }
-
-    @Test
-    fun `un esame solo - media ponderata uguale al voto`() = runTest {
-        fakeRepo.esami = listOf(esame(voto = 27, cfu = 6, data = LocalDate.of(2025, 1, 10)))
-
-        val stats = useCase().first().getOrThrow()
-
-        assertEquals(27.0, stats.mediaPonderata, 0.001)
-        assertEquals(6, stats.cfuSostenuti)
-        assertEquals(1, stats.andamentoCarriera.size)
-    }
+            assertEquals(0.0, stats.mediaPonderata, 0.001)
+            assertEquals(0, stats.cfuSostenuti)
+            assertEquals(0.0, stats.baseLaurea, 0.001)
+            assertTrue(stats.andamentoCarriera.isEmpty())
+        }
 
     @Test
-    fun `media ponderata calcolata correttamente su più esami`() = runTest {
-        // (28*6 + 30*12) / (6+12) = (168 + 360) / 18 = 528/18 = 29.33...
-        fakeRepo.esami = listOf(
-            esame(voto = 28, cfu = 6, data = LocalDate.of(2025, 1, 10)),
-            esame(voto = 30, cfu = 12, data = LocalDate.of(2025, 2, 20))
-        )
+    fun `un esame solo - media ponderata uguale al voto`() =
+        runTest {
+            fakeRepo.esami = listOf(esame(voto = 27, cfu = 6, data = LocalDate.of(2025, 1, 10)))
 
-        val stats = useCase().first().getOrThrow()
+            val stats = useCase().first().getOrThrow()
 
-        assertEquals(29.333, stats.mediaPonderata, 0.001)
-        assertEquals(18, stats.cfuSostenuti)
-    }
+            assertEquals(27.0, stats.mediaPonderata, 0.001)
+            assertEquals(6, stats.cfuSostenuti)
+            assertEquals(1, stats.andamentoCarriera.size)
+        }
 
     @Test
-    fun `base laurea uguale a mediaPonderata per 110 diviso 30`() = runTest {
-        fakeRepo.esami = listOf(esame(voto = 27, cfu = 6, data = LocalDate.of(2025, 1, 10)))
+    fun `media ponderata calcolata correttamente su più esami`() =
+        runTest {
+            // (28*6 + 30*12) / (6+12) = (168 + 360) / 18 = 528/18 = 29.33...
+            fakeRepo.esami =
+                listOf(
+                    esame(voto = 28, cfu = 6, data = LocalDate.of(2025, 1, 10)),
+                    esame(voto = 30, cfu = 12, data = LocalDate.of(2025, 2, 20)),
+                )
 
-        val stats = useCase().first().getOrThrow()
-        val attesa = (27.0 * 110.0) / 30.0
+            val stats = useCase().first().getOrThrow()
 
-        assertEquals(attesa, stats.baseLaurea, 0.001)
-    }
-
-    @Test
-    fun `andamento carriera ordinato per data crescente`() = runTest {
-        val data1 = LocalDate.of(2025, 3, 1)
-        val data2 = LocalDate.of(2025, 1, 1)
-        fakeRepo.esami = listOf(
-            esame(voto = 25, cfu = 6, data = data1),
-            esame(voto = 30, cfu = 6, data = data2)
-        )
-
-        val stats = useCase().first().getOrThrow()
-
-        assertEquals(data2, stats.andamentoCarriera[0].data)
-        assertEquals(data1, stats.andamentoCarriera[1].data)
-    }
+            assertEquals(29.333, stats.mediaPonderata, 0.001)
+            assertEquals(18, stats.cfuSostenuti)
+        }
 
     @Test
-    fun `media ponderata progressiva nell andamento cresce correttamente`() = runTest {
-        // Esame 1: 24 voto, 6 CFU → media = 24.0
-        // Esame 2: 30 voto, 6 CFU → media = (24*6 + 30*6) / 12 = 27.0
-        fakeRepo.esami = listOf(
-            esame(voto = 24, cfu = 6, data = LocalDate.of(2025, 1, 1)),
-            esame(voto = 30, cfu = 6, data = LocalDate.of(2025, 2, 1))
-        )
+    fun `base laurea uguale a mediaPonderata per 110 diviso 30`() =
+        runTest {
+            fakeRepo.esami = listOf(esame(voto = 27, cfu = 6, data = LocalDate.of(2025, 1, 10)))
 
-        val andamento = useCase().first().getOrThrow().andamentoCarriera
+            val stats = useCase().first().getOrThrow()
+            val attesa = (27.0 * 110.0) / 30.0
 
-        assertEquals(24.0, andamento[0].mediaPonderataProgressiva, 0.001)
-        assertEquals(27.0, andamento[1].mediaPonderataProgressiva, 0.001)
-    }
+            assertEquals(attesa, stats.baseLaurea, 0.001)
+        }
+
+    @Test
+    fun `andamento carriera ordinato per data crescente`() =
+        runTest {
+            val data1 = LocalDate.of(2025, 3, 1)
+            val data2 = LocalDate.of(2025, 1, 1)
+            fakeRepo.esami =
+                listOf(
+                    esame(voto = 25, cfu = 6, data = data1),
+                    esame(voto = 30, cfu = 6, data = data2),
+                )
+
+            val stats = useCase().first().getOrThrow()
+
+            assertEquals(data2, stats.andamentoCarriera[0].data)
+            assertEquals(data1, stats.andamentoCarriera[1].data)
+        }
+
+    @Test
+    fun `media ponderata progressiva nell andamento cresce correttamente`() =
+        runTest {
+            // Esame 1: 24 voto, 6 CFU → media = 24.0
+            // Esame 2: 30 voto, 6 CFU → media = (24*6 + 30*6) / 12 = 27.0
+            fakeRepo.esami =
+                listOf(
+                    esame(voto = 24, cfu = 6, data = LocalDate.of(2025, 1, 1)),
+                    esame(voto = 30, cfu = 6, data = LocalDate.of(2025, 2, 1)),
+                )
+
+            val andamento = useCase().first().getOrThrow().andamentoCarriera
+
+            assertEquals(24.0, andamento[0].mediaPonderataProgressiva, 0.001)
+            assertEquals(27.0, andamento[1].mediaPonderataProgressiva, 0.001)
+        }
 }

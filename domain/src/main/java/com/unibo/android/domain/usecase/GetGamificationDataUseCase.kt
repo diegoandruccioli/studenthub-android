@@ -11,21 +11,23 @@ import kotlinx.coroutines.flow.map
  * Business logic for levels and XP is managed by the backend.
  */
 class GetGamificationDataUseCase(
-    private val gamificationRepository: GamificationRepository
+    private val gamificationRepository: GamificationRepository,
 ) {
-    operator fun invoke(): Flow<UserStats> = gamificationRepository.userStatsFlow.map { stats ->
-        val xpLabel = if (stats.prossimaSoglia != null) {
-            "${stats.xp} / ${stats.prossimaSoglia} XP"
-        } else {
-            "${stats.xp} XP (MAX)"
+    operator fun invoke(): Flow<UserStats> =
+        gamificationRepository.userStatsFlow.map { stats ->
+            val xpLabel =
+                if (stats.prossimaSoglia != null) {
+                    "${stats.xp} / ${stats.prossimaSoglia} XP"
+                } else {
+                    "${stats.xp} XP (MAX)"
+                }
+
+            val formattedTitle = "Lv. ${stats.level} - ${stats.levelTitle}"
+
+            stats.copy(
+                levelTitle = formattedTitle,
+                xpLabel = xpLabel,
+                progressPercentage = (stats.progressPercentage / 100f).coerceIn(0f, 1f),
+            )
         }
-
-        val formattedTitle = "Lv. ${stats.level} - ${stats.levelTitle}"
-
-        stats.copy(
-            levelTitle = formattedTitle,
-            xpLabel = xpLabel,
-            progressPercentage = (stats.progressPercentage / 100f).coerceIn(0f, 1f)
-        )
-    }
 }

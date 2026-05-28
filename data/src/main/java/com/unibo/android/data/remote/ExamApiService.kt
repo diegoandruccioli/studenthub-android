@@ -19,13 +19,20 @@ interface ExamApiService {
     suspend fun getEsami(): Response<List<ExamDto>>
 
     @POST("exams")
-    suspend fun addEsami(@Body esami: List<ExamRequest>): Response<AddExamResponse>
+    suspend fun addEsami(
+        @Body esami: List<ExamRequest>,
+    ): Response<AddExamResponse>
 
     @PUT("exams/{id}")
-    suspend fun updateEsame(@Path("id") id: Int, @Body body: ExamRequest): Response<UpdateExamResponse>
+    suspend fun updateEsame(
+        @Path("id") id: Int,
+        @Body body: ExamRequest,
+    ): Response<UpdateExamResponse>
 
     @DELETE("exams/{id}")
-    suspend fun deleteEsame(@Path("id") id: Int): Response<ResponseBody>
+    suspend fun deleteEsame(
+        @Path("id") id: Int,
+    ): Response<ResponseBody>
 
     @GET("stats")
     suspend fun getStatistiche(): Response<StatsResponseDto>

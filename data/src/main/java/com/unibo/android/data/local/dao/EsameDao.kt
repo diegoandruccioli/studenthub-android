@@ -35,7 +35,10 @@ interface EsameDao {
     suspend fun insertEsame(esame: EsameEntity): Long
 
     @Query("UPDATE esami SET remote_id = :remoteId, pending_sync = 0 WHERE id = :localId")
-    suspend fun markSynced(localId: Int, remoteId: Int)
+    suspend fun markSynced(
+        localId: Int,
+        remoteId: Int,
+    )
 
     @Query("UPDATE esami SET pending_delete = 1 WHERE id = :id")
     suspend fun markPendingDelete(id: Int)

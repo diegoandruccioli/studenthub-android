@@ -17,12 +17,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
 class AuthRepositoryImpl(private val context: Context) : AuthRepository {
-
     private val apiService = NetworkClient.authApiService
     private val sessionDataStore = SessionDataStore(context)
     private val gson = Gson()
 
-    override suspend fun login(email: String, password: String): Result<User> =
+    override suspend fun login(
+        email: String,
+        password: String,
+    ): Result<User> =
         withContext(Dispatchers.IO) {
             try {
                 val response = apiService.login(LoginRequest(email, password))
@@ -33,16 +35,17 @@ class AuthRepositoryImpl(private val context: Context) : AuthRepository {
                         sessionDataStore.setLoggedIn(true)
                         sessionDataStore.setUserId(userDto.id)
                         Result.success(
-                            User(userDto.id, userDto.nome, userDto.cognome, userDto.email, userDto.ruolo)
+                            User(userDto.id, userDto.nome, userDto.cognome, userDto.email, userDto.ruolo),
                         )
                     } else {
                         Result.failure(Exception("Credenziali non valide"))
                     }
                 } else {
-                    val errorMsg = response.errorBody()?.string()
-                        ?.let { runCatching { gson.fromJson(it, ErrorResponse::class.java) }.getOrNull() }
-                        ?.let { it.error ?: it.message }
-                        ?: "Credenziali non valide"
+                    val errorMsg =
+                        response.errorBody()?.string()
+                            ?.let { runCatching { gson.fromJson(it, ErrorResponse::class.java) }.getOrNull() }
+                            ?.let { it.error ?: it.message }
+                            ?: "Credenziali non valide"
                     Result.failure(Exception(errorMsg))
                 }
             } catch (e: Exception) {
@@ -54,44 +57,47 @@ class AuthRepositoryImpl(private val context: Context) : AuthRepository {
         nome: String,
         cognome: String,
         email: String,
-        password: String
-    ): Result<User> = withContext(Dispatchers.IO) {
-        try {
-            val response = apiService.register(RegisterRequest(nome, cognome, email, password))
-            if (response.isSuccessful) {
-                val body = response.body()
-                val userDto = body?.user
-                if (body?.success == true && userDto != null) {
-                    sessionDataStore.setLoggedIn(true)
-                    sessionDataStore.setUserId(userDto.id)
-                    Result.success(
-                        User(userDto.id, userDto.nome, userDto.cognome, userDto.email, userDto.ruolo)
-                    )
+        password: String,
+    ): Result<User> =
+        withContext(Dispatchers.IO) {
+            try {
+                val response = apiService.register(RegisterRequest(nome, cognome, email, password))
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    val userDto = body?.user
+                    if (body?.success == true && userDto != null) {
+                        sessionDataStore.setLoggedIn(true)
+                        sessionDataStore.setUserId(userDto.id)
+                        Result.success(
+                            User(userDto.id, userDto.nome, userDto.cognome, userDto.email, userDto.ruolo),
+                        )
+                    } else {
+                        Result.failure(Exception("Registrazione fallita"))
+                    }
                 } else {
-                    Result.failure(Exception("Registrazione fallita"))
+                    val errorMsg =
+                        response.errorBody()?.string()
+                            ?.let { runCatching { gson.fromJson(it, ErrorResponse::class.java) }.getOrNull() }
+                            ?.let { it.error ?: it.message }
+                            ?: "Registrazione fallita"
+                    Result.failure(Exception(errorMsg))
                 }
-            } else {
-                val errorMsg = response.errorBody()?.string()
-                    ?.let { runCatching { gson.fromJson(it, ErrorResponse::class.java) }.getOrNull() }
-                    ?.let { it.error ?: it.message }
-                    ?: "Registrazione fallita"
-                Result.failure(Exception(errorMsg))
+            } catch (e: Exception) {
+                Result.failure(Exception("Impossibile raggiungere il server"))
             }
-        } catch (e: Exception) {
-            Result.failure(Exception("Impossibile raggiungere il server"))
         }
-    }
 
-    override suspend fun logout(): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching { apiService.logout() }.getOrNull()?.body()?.close()
-        NetworkClient.clearCookies()
-        // Pulizia dati locali: garantisce isolamento tra utenti diversi sullo stesso device
-        StudentHubDatabase.getInstance(context).clearAllTables()
-        RankDataStore(context).clear()
-        SettingsDataStore(context).clear()
-        sessionDataStore.setLoggedIn(false)
-        Result.success(Unit)
-    }
+    override suspend fun logout(): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            runCatching { apiService.logout() }.getOrNull()?.body()?.close()
+            NetworkClient.clearCookies()
+            // Pulizia dati locali: garantisce isolamento tra utenti diversi sullo stesso device
+            StudentHubDatabase.getInstance(context).clearAllTables()
+            RankDataStore(context).clear()
+            SettingsDataStore(context).clear()
+            sessionDataStore.setLoggedIn(false)
+            Result.success(Unit)
+        }
 
     override fun isLoggedIn(): Flow<Boolean> = sessionDataStore.isLoggedIn
 }

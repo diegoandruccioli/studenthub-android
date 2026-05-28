@@ -8,6 +8,5 @@ data class UserStats(
     val levelTitle: String,
     val progressPercentage: Float,
     val xpLabel: String,
-    val prossimaSoglia: Int? = null
+    val prossimaSoglia: Int? = null,
 )
-

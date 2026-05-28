@@ -8,21 +8,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -33,7 +29,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -49,7 +45,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.unibo.android.domain.model.Esame
-import com.unibo.android.domain.model.Settings
 import com.unibo.android.ui.R
 import com.unibo.android.ui.screens.gamification.GamificationUiState
 import com.unibo.android.ui.screens.gamification.GamificationViewModel
@@ -58,12 +53,11 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
-
 @Composable
 fun LibrettoScreen(
     viewModel: LibrettoViewModel,
     gamificationViewModel: GamificationViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val esami by viewModel.esami.collectAsStateWithLifecycle()
     val sortBy by viewModel.sortBy.collectAsStateWithLifecycle()
@@ -87,19 +81,20 @@ fun LibrettoScreen(
                 Text(
                     text = stringResource(R.string.statistiche_breadcrumb).replace("Statistiche", "Libretto"),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
                     text = "Libretto",
-                    style = MaterialTheme.typography.headlineLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    style =
+                        MaterialTheme.typography.headlineLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                        ),
                 )
                 Text(
                     text = "Gestisci i tuoi esami e traccia i tuoi progressi",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
 
@@ -108,10 +103,11 @@ fun LibrettoScreen(
                 when (val state = gamificationState) {
                     is GamificationUiState.Loading -> {
                         LinearProgressIndicator(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp)
-                                .clip(CircleShape)
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp)
+                                    .clip(CircleShape),
                         )
                     }
                     is GamificationUiState.Success -> {
@@ -119,7 +115,7 @@ fun LibrettoScreen(
                             level = state.stats.level,
                             levelTitle = state.stats.levelTitle,
                             xpLabel = state.stats.xpLabel,
-                            progressPercentage = state.stats.progressPercentage
+                            progressPercentage = state.stats.progressPercentage,
                         )
                     }
                     is GamificationUiState.Error -> {
@@ -130,54 +126,60 @@ fun LibrettoScreen(
 
             // Filtri sort
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.Sort,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(20.dp),
                 )
                 FilterChip(
                     selected = sortBy == SortBy.DATA,
                     onClick = { viewModel.setSortBy(SortBy.DATA) },
                     label = { Text(stringResource(R.string.sort_data)) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
+                    colors =
+                        FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ),
                 )
                 FilterChip(
                     selected = sortBy == SortBy.VOTO,
                     onClick = { viewModel.setSortBy(SortBy.VOTO) },
                     label = { Text(stringResource(R.string.sort_voto)) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
+                    colors =
+                        FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ),
                 )
                 FilterChip(
                     selected = sortBy == SortBy.CFU,
                     onClick = { viewModel.setSortBy(SortBy.CFU) },
                     label = { Text(stringResource(R.string.sort_cfu)) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
+                    colors =
+                        FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ),
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 TextButton(onClick = { viewModel.toggleSortOrder() }) {
                     Text(
-                        text = if (sortOrder == SortOrder.DESC)
-                            stringResource(R.string.order_desc)
-                        else
-                            stringResource(R.string.order_asc),
+                        text =
+                            if (sortOrder == SortOrder.DESC) {
+                                stringResource(R.string.order_desc)
+                            } else {
+                                stringResource(R.string.order_asc)
+                            },
                         style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                 }
             }
@@ -185,30 +187,34 @@ fun LibrettoScreen(
             if (esami.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = stringResource(R.string.libretto_vuoto),
                         modifier = Modifier.padding(horizontal = 32.dp),
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             } else {
                 LazyColumn(
-                    contentPadding = PaddingValues(
-                        start = 16.dp, end = 16.dp, top = 4.dp, bottom = 88.dp
-                    ),
+                    contentPadding =
+                        PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 4.dp,
+                            bottom = 88.dp,
+                        ),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
                 ) {
                     items(esami, key = { it.id }) { esame ->
                         EsameCard(
                             esame = esame,
                             settings = settings,
                             onEditClick = { esameToEdit = esame },
-                            onDeleteClick = { esameToDelete = esame }
+                            onDeleteClick = { esameToDelete = esame },
                         )
                     }
                 }
@@ -217,13 +223,14 @@ fun LibrettoScreen(
 
         FloatingActionButton(
             onClick = { showAddDialog = true },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
+            modifier =
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
         ) {
             Icon(
                 imageVector = Icons.Default.Add,
-                contentDescription = stringResource(R.string.aggiungi_esame)
+                contentDescription = stringResource(R.string.aggiungi_esame),
             )
         }
     }
@@ -237,7 +244,7 @@ fun LibrettoScreen(
             onConfirm = { esame ->
                 viewModel.addEsame(esame)
                 showAddDialog = false
-            }
+            },
         )
     }
 
@@ -251,7 +258,7 @@ fun LibrettoScreen(
             onConfirm = { updated ->
                 viewModel.updateEsame(updated)
                 esameToEdit = null
-            }
+            },
         )
     }
 
@@ -268,11 +275,11 @@ fun LibrettoScreen(
                     onClick = {
                         viewModel.deleteEsame(esame)
                         esameToDelete = null
-                    }
+                    },
                 ) {
                     Text(
                         text = stringResource(R.string.dialog_conferma_elimina),
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
             },
@@ -280,7 +287,7 @@ fun LibrettoScreen(
                 TextButton(onClick = { esameToDelete = null }) {
                     Text(stringResource(R.string.dialog_annulla))
                 }
-            }
+            },
         )
     }
 }
@@ -291,12 +298,12 @@ private fun EsameDialog(
     confirmLabel: String,
     onDismiss: () -> Unit,
     onConfirm: (Esame) -> Unit,
-    initialEsame: Esame? = null
+    initialEsame: Esame? = null,
 ) {
     var nome by remember { mutableStateOf(initialEsame?.nome ?: "") }
     var voto by remember { mutableStateOf(initialEsame?.voto?.toString() ?: "") }
     var cfu by remember { mutableStateOf(initialEsame?.cfu?.toString() ?: "") }
-    
+
     val dateFormatter = remember { DateTimeFormatter.ofPattern("dd/MM/yyyy") }
     var data by remember { mutableStateOf(initialEsame?.dataEsame?.format(dateFormatter) ?: "") }
     var lode by remember { mutableStateOf(initialEsame?.lode ?: false) }
@@ -320,7 +327,7 @@ private fun EsameDialog(
                     onValueChange = { nome = it },
                     label = { Text(stringResource(R.string.hint_nome)) },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = voto,
@@ -328,7 +335,7 @@ private fun EsameDialog(
                     label = { Text(stringResource(R.string.hint_voto)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = cfu,
@@ -340,26 +347,30 @@ private fun EsameDialog(
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = data,
                     onValueChange = { data = it },
                     label = { Text(stringResource(R.string.hint_data)) },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = lode,
                         onCheckedChange = { if (votoInt == 30) lode = it },
-                        enabled = votoInt == 30
+                        enabled = votoInt == 30,
                     )
                     Text(
                         text = stringResource(R.string.label_lode),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (votoInt == 30) MaterialTheme.colorScheme.onSurface
-                                else MaterialTheme.colorScheme.onSurfaceVariant
+                        color =
+                            if (votoInt == 30) {
+                                MaterialTheme.colorScheme.onSurface
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                     )
                 }
             }
@@ -370,12 +381,13 @@ private fun EsameDialog(
                     if (nome.isBlank()) return@TextButton
                     if (votoInt !in 18..30) return@TextButton
                     if (cfuInt !in 1..48) return@TextButton
-                    
-                    val localDate = try {
-                        LocalDate.parse(data.trim(), dateFormatter)
-                    } catch (e: DateTimeParseException) {
-                        return@TextButton
-                    }
+
+                    val localDate =
+                        try {
+                            LocalDate.parse(data.trim(), dateFormatter)
+                        } catch (e: DateTimeParseException) {
+                            return@TextButton
+                        }
 
                     onConfirm(
                         Esame(
@@ -384,16 +396,16 @@ private fun EsameDialog(
                             voto = votoInt,
                             lode = lode && votoInt == 30,
                             cfu = cfuInt,
-                            dataEsame = localDate
-                        )
+                            dataEsame = localDate,
+                        ),
                     )
-                }
+                },
             ) { Text(confirmLabel) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.dialog_annulla))
             }
-        }
+        },
     )
 }
