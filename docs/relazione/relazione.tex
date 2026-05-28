@@ -675,7 +675,7 @@ object NotificationUtils {
         
         val title = if (newRank < oldRank) "Rank migliorato!" else "Rank cambiato"
         val message = if (newRank < oldRank) {
-            "Sei salito in classifica! Ora sei al posto #$newRank 🎉"
+            "Sei salito in classifica! Ora sei al posto #$newRank!"
         } else {
             "Sei sceso in classifica. Ora sei al posto #$newRank"
         }
@@ -905,7 +905,7 @@ object StatisticheCalculator {
 }
 \end{lstlisting}
 
-\section{Rendering dichiarativo e performante del grafico carriera}
+\section{Rendering del grafico carriera}
 
 \paragraph{Problema}
 La visualizzazione dell'andamento accademico (\texttt{StatisticheScreen}) richiede un grafico
@@ -1120,16 +1120,13 @@ rendere i test con coroutine deterministici e privi di \texttt{delay} artificial
 \section{Sviluppi Futuri}
 
 \begin{itemize}
-    \item \textbf{Notifiche Push via FCM}: sostituire le notifiche locali del worker
+    \item \textbf{Notifiche Push}: sostituire le notifiche locali del worker
     \texttt{LeaderboardCheckWorker} con push server-side,
     eliminando il polling periodico dal dispositivo.
     \item \textbf{Widget home screen}: visualizzazione rapida di media ponderata e
     livello XP senza aprire l'app, tramite Glance API (Jetpack Compose per widget).
     \item \textbf{Importazione piano di studi}: integrazione con le API di Esse3 o
     Almaesami per pre-popolare il libretto con gli esami del piano di studi ufficiale.
-    \item \textbf{Dependency Injection con Hilt}: migrazione da \texttt{RepositoryProvider}
-    manuale a Hilt per migliorare la scalabilità del progetto e ridurre il boilerplate
-    nelle factory dei ViewModel.
 \end{itemize}
 
 \end{document}
