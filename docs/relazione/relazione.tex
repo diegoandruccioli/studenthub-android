@@ -16,6 +16,8 @@
 \usepackage{url}
 \usepackage{listings}
 \usepackage{xcolor}
+\usepackage[protrusion=true,expansion=false]{microtype}
+\setlength{\emergencystretch}{6em}
 
 % Kotlin syntax highlighting
 \definecolor{kotlinpurple}{rgb}{0.4,0.0,0.6}
@@ -117,7 +119,8 @@ di rete e vengono sincronizzate con il server quando la connettività è riprist
     \item Monitorare il completamento degli obiettivi di gamification e i punti XP guadagnati.
     \item Personalizzare le impostazioni dell'account (tema di colorazione dei voti, soglie RGB) nella schermata Profilo.
     \item Effettuare il logout dalla schermata Profilo; la sessione viene invalidata sia localmente che sul server.
-    \item Ricevere una notifica locale quando il proprio rank nella classifica migliora.
+    \item Modificare un esame già inserito aggiornandone nome, voto, CFU o data.
+    \item Ricevere una notifica locale quando la propria posizione in classifica cambia (sia in miglioramento che in peggioramento).
 \end{itemize}
 
 \section{Requisiti Minimi del Corso}
@@ -130,8 +133,8 @@ nei seguenti punti:
     \item \textbf{Separazione in moduli}: il codice è organizzato nei moduli \texttt{:domain},
           \texttt{:data}, \texttt{:ui} e \texttt{:app}, ciascuno con responsabilità distinte.
     \item \textbf{ViewModel e StateFlow}: ogni schermata utilizza un ViewModel dedicato
-          come unico state holder; la UI osserva uno \texttt{StateFlow} tramite
-          \texttt{collectAsStateWithLifecycle()} e non contiene logica di business.
+          come unico state holder; la UI osserva uno \texttt{StateFlow}
+          tramite \texttt{collectAsStateWithLifecycle()} e non contiene logica di business.
     \item \textbf{Kotlin Coroutines}: tutte le operazioni di I/O (Room, chiamate di rete) avvengono
           su \texttt{Dispatchers.IO}; il Main Thread non viene mai bloccato.
     \item \textbf{Jetpack Compose}: l'interfaccia utente è implementata interamente in Jetpack
@@ -215,22 +218,23 @@ persistenza richiederebbe modifiche solo in \texttt{:data}, lasciando intatti
 
 Il flusso di un'azione utente procede in senso discendente attraverso i layer:
 
-\begin{verbatim}
-Composable --(evento)--> ViewModel --> UseCase --> Repository (interfaccia)
-                                                        |
-                                               RepositoryImpl --> Room DAO
-                                                                   / Retrofit
-\end{verbatim}
+\begin{lstlisting}[language={},basicstyle=\ttfamily\small]
+Composable --(evento)--> ViewModel
+    --> UseCase --> Repository (interfaccia)
+                         |
+                  RepositoryImpl --> Room DAO / Retrofit
+\end{lstlisting}
 
 Il flusso reattivo dei dati procede in senso ascendente:
 
-\begin{verbatim}
+\begin{lstlisting}[language={},basicstyle=\ttfamily\small]
 Room DAO: Flow<List<EsameEntity>>
     --> RepositoryImpl: map + flowOn(Dispatchers.IO)
     --> UseCase: trasformazioni business
-    --> ViewModel: stateIn(viewModelScope, Eagerly|WhileSubscribed) --> StateFlow<UiState>
+    --> ViewModel: stateIn(viewModelScope, Eagerly|WhileSubscribed)
+                   --> StateFlow<UiState>
     --> Composable: collectAsStateWithLifecycle()
-\end{verbatim}
+\end{lstlisting}
 
 La UI non interroga mai attivamente i dati: osserva uno \texttt{StateFlow}
 e si ridisegna per recomposition ogni volta che lo stato cambia.
@@ -396,8 +400,8 @@ Con l'adozione di Jetpack Compose, la UI osserva il \texttt{StateFlow} tramite
 \texttt{collectAsStateWithLifecycle()}, che integra automaticamente la consapevolezza
 del ciclo di vita: la raccolta si sospende quando la schermata non è visibile e riprende
 al rientro in foreground, prevenendo aggiornamenti inutili e memory leak.
-La lista degli esami è implementata con \texttt{LazyColumn} e la funzione di estensione
-\texttt{items(list, key = \{ it.id \})}: Compose usa la chiave stabile per applicare
+La lista degli esami è implementata con \texttt{LazyColumn} e chiave stabile per item
+(\texttt{key = \{ it.id \}}): Compose usa la chiave per applicare
 la riconciliazione dell'albero delle composizioni, ottenendo lo stesso effetto di
 \texttt{DiffUtil.ItemCallback} senza richiedere un Adapter esplicito.
 
@@ -427,7 +431,7 @@ a \texttt{setContent \{\}}, con \texttt{enableEdgeToEdge()} per il disegno
 sotto le barre di sistema.
 
 Per la navigazione adattiva si utilizza \texttt{NavigationSuiteScaffold} della
-libreria \texttt{material3-adaptive-navigation-suite}: questo composable seleziona
+libreria \texttt{material3-adaptive-}\texttt{navigation-suite}: questo composable seleziona
 automaticamente la modalità di navigazione più appropriata in base alle dimensioni
 della finestra --- Bottom Navigation Bar su smartphone in verticale, Navigation Rail
 su tablet e in orizzontale, Navigation Drawer su schermi grandi.
@@ -619,7 +623,8 @@ con il precedente riutilizzando la logica di fetch già presente nel repository.
 \texttt{LeaderboardCheckWorker} (CoroutineWorker) è schedulato in
 \texttt{CustomApplication} ogni 15 minuti con constraint \texttt{CONNECTED}
 e policy \texttt{KEEP} (nessuna schedulazione duplicata). Prima del fetch, il rank
-corrente viene letto da \texttt{RankDataStore}; \texttt{GamificationRepositoryImpl.getLeaderboard()}
+corrente viene letto da \texttt{RankDataStore};
+\texttt{GamificationRepositoryImpl}\texttt{.getLeaderboard()}
 aggiorna \texttt{RankDataStore} come effetto collaterale tramite \texttt{saveMyRank()}.
 Il nuovo rank viene riletto e confrontato: se cambiato (in miglioramento o
 peggioramento), viene emessa una notifica con testo differenziato ---
@@ -678,6 +683,45 @@ Il pattern è identico a quello adottato nel frontend web (Vue\,3 + Pinia), dove
 Poiché \texttt{refreshObiettivi()} viene invocato da \texttt{LibrettoViewModel} dopo
 ogni operazione CRUD sugli esami, il Flow esposto da Room aggiorna automaticamente
 la UI degli obiettivi senza alcuna navigazione o refresh manuale.
+
+\section{Architettura reattiva del layer gamification}
+
+\paragraph{Problema}
+La schermata Obiettivi aggrega dati da sorgenti eterogenee: XP, livello e rank
+dell'utente (in \texttt{RankDataStore}), lista della classifica (cache Room) e
+lista degli obiettivi (Room). È necessario combinare queste sorgenti in un unico
+stato UI coerente, aggiornato reattivamente senza polling.
+
+\paragraph{Soluzione}
+\texttt{GamificationViewModel} usa \texttt{combine()} per fondere quattro Flow in
+un unico \texttt{StateFlow<GamificationUiState>}: \texttt{getGamificationDataUseCase()}
+(che combina sette chiavi di \texttt{RankDataStore} in uno \texttt{UserStats}),
+\texttt{getLeaderboardUseCase()} (Flow da Room), \texttt{\_errorMessage} e
+\texttt{\_isLoading}. Il metodo \texttt{refreshAll()} lancia in parallelo le due
+chiamate di rete tramite \texttt{async}, riducendo il tempo di attesa al massimo
+delle due:
+
+\begin{lstlisting}
+val uiState: StateFlow<GamificationUiState> = combine(
+    getGamificationDataUseCase(), // UserStats da RankDataStore
+    getLeaderboardUseCase(),      // List<LeaderboardEntry> da Room
+    _errorMessage,
+    _isLoading
+) { stats, leaderboard, error, isLoading ->
+    when {
+        error != null -> GamificationUiState.Error(error)
+        isLoading     -> GamificationUiState.Loading
+        else -> GamificationUiState.Success(
+            stats = stats,
+            leaderboard = leaderboard.sortedByDescending { it.xpTotali }
+        )
+    }
+}.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000),
+          GamificationUiState.Loading)
+\end{lstlisting}
+
+Qualunque aggiornamento in una sorgente (es.\ un esame inserito che modifica XP
+o rank) si propaghi automaticamente alla UI senza refresh manuali.
 
 \section{Rendering dichiarativo e performante del grafico carriera}
 
@@ -892,7 +936,7 @@ appariva nel Logcat. La diagnosi richiedeva di collegare un debugger e impostare
 breakpoint manualmente, rendendo il ciclo di debug molto lento.
 
 \paragraph{Soluzione}
-Aggiunto \texttt{.onFailure \{ e -> Log.e(TAG, "...", e) \}} a ogni blocco
+Aggiunto il callback \texttt{.onFailure \{ e ->} \texttt{Log.e(TAG, "...", e) \}} a ogni blocco
 \texttt{runCatching} critico nei repository (\texttt{EsameRepositoryImpl},
 \texttt{ObiettivoRepositoryImpl}, \texttt{SettingsRepositoryImpl}). Il tag
 per ogni repository è una costante \texttt{private const val TAG} dedicata:
@@ -913,14 +957,13 @@ un corpo vuoto. In Retrofit~2, dichiarare il tipo di ritorno come
 quel corpo come \texttt{Unit}; su corpi non vuoti questo produce un'eccezione a
 runtime.
 
-Per il DELETE l'impatto era funzionale: il blocco \texttt{runCatching} in
-\texttt{EsameRepositoryImpl.deleteEsame()} catturava l'eccezione, restituiva
-\texttt{null} e il controllo \texttt{response?.isSuccessful == true} risultava
-\texttt{false}. L'app chiamava \texttt{markPendingDelete} invece di
-\texttt{deleteEsame}, lasciando l'entità in Room con \texttt{pendingDelete = true}
-anche se il server aveva già eliminato l'esame con successo. L'esame spariva
-dalla UI (filtro \texttt{pending\_delete = 0}), ma \texttt{SyncExamsWorker}
-doveva eseguire un ciclo di retry in più prima di rimuoverlo definitivamente da Room.
+Per il DELETE l'impatto era funzionale: il blocco \texttt{runCatching} nel metodo
+\texttt{deleteEsame()} di \texttt{EsameRepositoryImpl} catturava l'eccezione e
+restituiva \texttt{null}; il controllo di successo della response risultava quindi
+\texttt{false}. L'app chiamava \texttt{markPendingDelete} invece di eliminare la riga
+da Room, lasciando l'entità con \texttt{pendingDelete = true} anche se il server aveva
+già eliminato l'esame. L'esame spariva dalla UI (filtro \texttt{pending\_delete = 0}),
+ma \texttt{SyncExamsWorker} doveva eseguire un ciclo di retry aggiuntivo.
 
 Per il logout l'impatto era nullo dal punto di vista dell'utente: l'eccezione
 veniva comunque inghiottita da \texttt{runCatching} e il codice successivo
@@ -930,8 +973,8 @@ non veniva completata correttamente lato OkHttp (connessione non rilasciata).
 
 \paragraph{Soluzione}
 Entrambi i metodi sono stati cambiati da \texttt{Response<Unit>} a
-\texttt{Response<ResponseBody>}, in analogia con quanto già adottato per
-\texttt{SettingsApiService.updateSettings()}. Il corpo viene chiuso
+\texttt{Response<ResponseBody>}, in analogia con il metodo \texttt{updateSettings()}
+già presente in \texttt{SettingsApiService}. Il corpo viene chiuso
 esplicitamente con \texttt{body()?.close()} per rilasciare la connessione
 OkHttp; nessun campo del corpo viene letto poiché non è necessario.
 
@@ -1105,9 +1148,9 @@ la composizione della schermata raggiunga il \texttt{LaunchedEffect}.
 \section{Sviluppi Futuri}
 
 \begin{itemize}
-    \item \textbf{Notifiche Push via FCM}: sostituire le notifiche locali del
-    \texttt{LeaderboardCheckWorker} con push server-side per notificare l'utente
-    anche senza polling periodico dal dispositivo.
+    \item \textbf{Notifiche Push via FCM}: sostituire le notifiche locali del worker
+    \texttt{LeaderboardCheckWorker} con push server-side,
+    eliminando il polling periodico dal dispositivo.
     \item \textbf{Widget home screen}: visualizzazione rapida di media ponderata e
     livello XP senza aprire l'app, tramite Glance API (Jetpack Compose per widget).
     \item \textbf{Importazione piano di studi}: integrazione con le API di Esse3 o
