@@ -185,21 +185,26 @@ flowchart TD
 
 ---
 
-### Obiettivi
+### Obiettivi e Classifica
 
 ```mermaid
 flowchart TD
-    OBJ[Obiettivi] --> OBJ_FLOW[StateFlow sempre attivo\nRoom Flow → obiettivi in tempo reale]
-    OBJ_FLOW --> OBJ_LIST[Lista 4 obiettivi con XP]
-
-    OBJ_LIST --> PP[Primo Passo\n≥ 1 esame superato · 150 XP]
-    OBJ_LIST --> SEC[Secchione\n≥ 1 esame con lode · 300 XP]
-    OBJ_LIST --> MAR[Maratoneta\n3+ esami nello stesso mese · 500 XP]
-    OBJ_LIST --> GDB[Giro di Boa\n≥ 90 CFU totali · 800 XP]
-
-    ADD_DEL[add / update / delete esame] -->|checkObiettiviUseCase| EVAL[GoalEvaluator\nvaluta ogni obiettivo]
-    EVAL -->|non ancora completato + criterio soddisfatto| UNLOCK[updateGoalCompletion = true]
-    UNLOCK --> OBJ_FLOW
+    OBJ[Obiettivi Screen] --> OBS_OBJ[ObiettiviViewModel\nGetObiettiviUseCase]
+    OBJ --> OBS_STATS[GamificationViewModel\nGetGamificationDataUseCase]
+    
+    OBS_OBJ --> FLOW_OBJ[Flow da Room\nobiettivi cached]
+    OBS_STATS --> FLOW_STATS[Flow da RankDataStore\nXP / Rank / Livello]
+    
+    REFRESH[LaunchedEffect / CRUD trigger] --> API_BADGES[GET /gamification/badges\ncatalogo completo]
+    REFRESH --> API_MYBADGES[GET /gamification/my-badges\nsbloccati dall'utente]
+    REFRESH --> API_STATS[GET /gamification/my-stats\nstatistiche gamification]
+    
+    API_BADGES & API_MYBADGES --> MERGE[Merge nel Repository:\nsbloccati set in catalogo]
+    MERGE --> ROOM_OBJ[(Salva in Room\ntabella obiettivi)]
+    ROOM_OBJ --> FLOW_OBJ
+    
+    API_STATS --> DATASTORE_STATS[(Salva in RankDataStore)]
+    DATASTORE_STATS --> FLOW_STATS
 ```
 
 ---
@@ -352,20 +357,19 @@ L'app punta a `http://10.0.2.2:3010/api/` (configurata in `NetworkClient.kt`).
 
 ## Test
 
-38 test unitari distribuiti su `:domain` e `:ui`, zero failures.
+29 test unitari distribuiti su `:domain` e `:ui` (più 3 test strumentali/di esempio generati dall'IDE), con il 100% di successo.
 
 ```bash
 ./gradlew test
 ```
 
-| Suite | Modulo | Test |
-|-------|--------|------|
+| Suite | Modulo | Descrizione |
+|-------|--------|-------------|
 | `AuthUseCaseTest` | :domain | Login/register successo e fallimento |
-| `GoalEvaluatorTest` | :domain | Tutti e 4 i GoalEvaluator con casi limite |
-| `GetStatisticheUseCaseTest` | :domain | Media ponderata, CFU, baseLaurea, andamento |
-| `LibrettoViewModelTest` | :ui | CRUD esami, sort, trigger obiettivi |
-| `ProfiloViewModelTest` | :ui | Caricamento/salvataggio settings, logout |
-| `StatisticheViewModelTest` | :ui | Empty state, Success, Error |
+| `GetStatisticheUseCaseTest` | :domain | Media ponderata, CFU, baseLaurea, andamento progressivo |
+| `LibrettoViewModelTest` | :ui | CRUD esami, sort e ordinamento, trigger refresh obiettivi/classifica |
+| `ProfiloViewModelTest` | :ui | Caricamento/salvataggio settings, isolamento della sessione locale e logout |
+| `StatisticheViewModelTest` | :ui | Gestione degli stati UI (Empty state, Success, Error) per le statistiche |
 
 ---
 

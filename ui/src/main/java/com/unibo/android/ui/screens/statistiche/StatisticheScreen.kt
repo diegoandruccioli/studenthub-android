@@ -364,6 +364,15 @@ fun CareerChart(
                     cubicTo(cp1X, prev.y, cp2X, curr.y, curr.x, curr.y)
                 }
             }
+            drawPath(
+                path = pathMedia,
+                color = errorColor.copy(alpha = progress),
+                style = Stroke(
+                    width = 2.dp.toPx(),
+                    join = StrokeJoin.Round,
+                    cap = StrokeCap.Round
+                )
+            )
         }
 
         pointsVoti.forEachIndexed { index, point ->
