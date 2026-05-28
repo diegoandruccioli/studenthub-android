@@ -581,35 +581,47 @@ Una guardia esplicita previene loop infiniti: se la request fallita è già
 \section{Sincronizzazione offline-first con WorkManager}
 
 \paragraph{Problema}
-L'utente deve poter inserire e modificare esami anche senza connessione.
-Le operazioni offline non devono andare perse quando la rete torna disponibile,
-anche se l'app è stata chiusa nel frattempo.
+L'utente deve poter inserire, modificare ed eliminare esami anche in assenza di connessione
+di rete. Queste operazioni offline non devono andare perse e devono essere sincronizzate
+con il server non appena la connettività torna disponibile, garantendo la consistenza dei
+dati ed evitando problemi derivanti da aggiornamenti parziali o disallineati tra il
+database locale e le chiamate di rete.
 
 \paragraph{Soluzione}
-\texttt{EsameEntity} espone due flag di sincronizzazione:
-\texttt{pendingSync: Boolean} (default \texttt{true}) per add/update e
-\texttt{pendingDelete: Boolean} (default \texttt{false}) per i delete da ritentare.
-Quando la rete è disponibile, l'operazione viene inviata immediatamente tramite
-Retrofit; in caso di successo \texttt{markSynced()} azzera \texttt{pendingSync}
-e salva il \texttt{remoteId}. Se un DELETE fallisce per assenza di rete,
-\texttt{deleteEsame} chiama \texttt{markPendingDelete(id)}: l'esame è nascosto
-dalla UI (\texttt{getAllEsami} filtra \texttt{pending\_delete = 0}) ma rimane
-in Room per il retry. Analogamente, i record con \texttt{pendingSync = true}
-vengono esclusi dalla query \texttt{getPendingDeleteEsami}, e viceversa.
+Il sistema adotta il \textbf{Transactional Outbox Pattern}. Invece di gestire la coda di
+sincronizzazione direttamente tramite flag sulla tabella degli esami, viene introdotta
+una tabella dedicata denominata \texttt{action\_outbox} e un enum \texttt{SyncStatus}
+con i valori \texttt{PENDING}, \texttt{SYNCED} e \texttt{FAILED}.
 
-\texttt{SyncExamsWorker} esegue in ordine: (1) retry dei DELETE pendenti ---
-se il server risponde 404 l'esame è già eliminato e viene rimosso localmente;
-(2) retry degli add/update pendenti con la stessa logica POST/PUT.
-Dopo ogni sync riuscito il worker aggiorna le statistiche di gamification e
-gli obiettivi. In caso di errori parziali restituisce \texttt{Result.retry()}
-per il backoff esponenziale di WorkManager.
+Ogni volta che l'utente esegue un'azione di inserimento, modifica o eliminazione, l'app
+esegue due operazioni contemporaneamente: aggiorna la tabella \texttt{esami} locale e inserisce
+la corrispondente azione di sincronizzazione nella tabella \texttt{action\_outbox}. Queste due
+operazioni sono racchiuse all'interno di una singola transazione atomica ACID di Room.
+Ciò garantisce la massima consistenza: non si può verificare la situazione in cui l'esame
+locale viene salvato ma la richiesta di sincronizzazione non viene registrata (o viceversa),
+risolvendo alla radice il rischio di inconsistenza dovuto alla scrittura separata su due
+sistemi differenti (il database locale e la coda dei messaggi/rete).
 
-La sincronizzazione del catalogo esami in entrata (\texttt{refreshEsami}) usa
-una strategia \emph{last-write-wins} con priorità locale: gli esami modificati
-sul server vengono aggiornati in Room solo se la copia locale è già sincronizzata
-(\texttt{pendingSync = false}) e non è in attesa di eliminazione
-(\texttt{pendingDelete = false}). Se la copia locale è in modifica offline
-(\texttt{pendingSync = true}) la versione locale vince.
+Le azioni inserite nell'outbox contengono il tipo di operazione (aggiunta, modifica, eliminazione)
+e i dati dell'esame. \texttt{SyncExamsWorker} viene eseguito periodicamente in background
+da WorkManager con vincolo di connessione di rete attiva. Il worker recupera i record
+in stato \texttt{PENDING} dall'outbox e li elabora in sequenza cronologica:
+\begin{enumerate}
+    \item Per le eliminazioni (\texttt{DELETE}), effettua la chiamata remota e in caso di successo
+    rimuove definitivamente il record locale. Se il server risponde 404, l'esame è già stato rimosso
+    e viene eliminato anche in locale.
+    \item Per inserimenti e modifiche (\texttt{ADD}/\texttt{UPDATE}), esegue le richieste POST/PUT. In caso di successo,
+    aggiorna lo stato dell'outbox a \texttt{SYNCED}.
+\end{enumerate}
+In caso di fallimento della chiamata di rete per problemi temporanei, lo stato dell'azione viene
+impostato a \texttt{FAILED} e il worker restituisce \texttt{Result.retry()}, innescando il
+meccanismo di backoff esponenziale di WorkManager per un tentativo successivo.
+
+Per quanto riguarda il flusso in entrata (\texttt{refreshEsami}), la sincronizzazione dal server
+segue una politica di risoluzione dei conflitti a priorità locale: se per un determinato esame
+è presente un record non ancora sincronizzato in \texttt{action\_outbox}, la versione locale
+ha la precedenza e non viene sovrascritta dai dati provenienti dal server, preservando le modifiche
+offline dell'utente.
 
 \section{Notifiche di cambio rank con LeaderboardCheckWorker}
 
@@ -635,6 +647,33 @@ In caso di eccezione il worker restituisce \texttt{Result.retry()} per il backof
 automatico di WorkManager. Il permesso \texttt{POST\_NOTIFICATIONS} è richiesto
 in \texttt{ObiettiviScreen} con un dialog di rationale; l'utente può rifiutarlo
 senza compromettere le funzionalità principali dell'app.
+
+Di seguito viene riportato lo snippet del worker \texttt{LeaderboardCheckWorker}, allineato alla logica reale definita nel codice dell'applicazione:
+
+\begin{lstlisting}
+class LeaderboardCheckWorker(
+    appContext: Context,
+    workerParams: WorkerParameters,
+) : CoroutineWorker(appContext, workerParams) {
+
+    private val rankDataStore = RankDataStore(appContext)
+    private val repository = GamificationRepositoryImpl(appContext)
+
+    override suspend fun doWork(): Result {
+        return try {
+            rankDataStore.saveLastCheckTimestamp(System.currentTimeMillis())
+            val leaderboardResult = repository.getLeaderboard()
+            if (leaderboardResult.isSuccess) {
+                Result.success()
+            } else {
+                Result.retry()
+            }
+        } catch (e: Exception) {
+            Result.retry()
+        }
+    }
+}
+\end{lstlisting}
 
 \section{Sincronizzazione dello stato di completamento degli obiettivi}
 

@@ -155,24 +155,19 @@ flowchart TD
 
     LIB_LIST --> LIB_ADD[FAB + → dialog Aggiungi\nnome · voto 18-30 · CFU 1-48 · data · lode se 30]
     LIB_ADD --> INS{Inserimento}
-    INS -->|Room insert immediato| LIB_LIST
-    INS -->|POST /exams async| SYNC_OK{API ok?}
-    SYNC_OK -->|Sì| MARK[markSynced\nremoteId + pendingSync=false]
-    SYNC_OK -->|No — rete assente| PENDING[pendingSync=true\nSyncWorker riprende]
-
+    INS -->|Transazione ACID in Room| TX_ADD[Salva esame locale + ADD in action_outbox]
+    TX_ADD --> LIB_LIST
+ 
     LIB_LIST --> LIB_EDIT[Tap ✎ → dialog Modifica\npre-riempito con valori attuali]
     LIB_EDIT --> UPD{Aggiornamento}
-    UPD -->|Room update immediato| LIB_LIST
-    UPD -->|PUT /exams/:id async| UPD_OK{API ok?}
-    UPD_OK -->|Sì| MARK
-    UPD_OK -->|No| PENDING
+    UPD -->|Transazione ACID in Room| TX_UPD[Aggiorna esame locale + UPDATE in action_outbox]
+    TX_UPD --> LIB_LIST
     LIB_EDIT -->|checkObiettivi| OBJ_CHK[Valuta obiettivi]
-
+ 
     LIB_LIST --> LIB_DEL[Tap 🗑 → dialog conferma eliminazione]
-    LIB_DEL --> DEL_API{DELETE /exams/:id}
-    DEL_API -->|200| DEL_LOCAL[Room delete]
-    DEL_API -->|fallito / offline| KEEP[Esame mantenuto\nutente può riprovare]
-    DEL_LOCAL --> OBJ_CHK
+    LIB_DEL --> DEL[Eliminazione]
+    DEL -->|Transazione ACID in Room| TX_DEL[Nasconde esame locale + DELETE in action_outbox]
+    TX_DEL --> OBJ_CHK
 ```
 
 ---
@@ -239,23 +234,25 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    WM[WorkManager\nSyncExamsWorker\nogni ora · NetworkType.CONNECTED] --> FETCH[getUnsyncedEsami\nWHERE pending_sync = 1]
-    FETCH -->|lista vuota| SUCCESS[Result.success]
-    FETCH -->|lista non vuota| LOOP[per ogni esame]
+    WM[WorkManager\nSyncExamsWorker\nogni ora · NetworkType.CONNECTED] --> FETCH[Leggi record PENDING\nda action_outbox]
+    FETCH -->|vuoto| SUCCESS[Result.success]
+    FETCH -->|non vuoto| LOOP[per ogni azione in outbox]
 
-    LOOP --> HAS_REMOTE{remoteId\nnon null?}
+    LOOP --> TYPE{Tipo azione?}
+    TYPE -->|ADD| POST[POST /exams]
+    TYPE -->|UPDATE| PUT[PUT /exams/:remoteId]
+    TYPE -->|DELETE| DEL[DELETE /exams/:remoteId]
 
-    HAS_REMOTE -->|No — nuovo esame| POST[POST /exams]
-    POST -->|200| MARK_NEW[markSynced\nremoteId assegnato]
-    POST -->|fallito| ERR_W[hasError = true]
+    POST & PUT & DEL --> API_OK{Risposta OK?}
+    API_OK -->|Sì| MARK_OK[Stato = SYNCED\n(o elimina riga)]
+    API_OK -->|No| MARK_FAIL[Stato = FAILED\nhasError = true]
 
-    HAS_REMOTE -->|Sì — esame modificato| PUT_W[PUT /exams/:remoteId]
-    PUT_W -->|200| MARK_UPD[markSynced\npendingSync = false]
-    PUT_W -->|404 — rimosso dal server| RESET[remoteId = null\nricreato al prossimo run]
-    PUT_W -->|altro errore| ERR_W
-
-    ERR_W --> RETRY[Result.retry]
-    MARK_NEW & MARK_UPD & RESET --> NEXT[esame successivo]
+    MARK_OK & MARK_FAIL --> NEXT[azione successiva]
+    NEXT --> LOOP
+    
+    SUCCESS & MARK_FAIL --> END{Ci sono errori?}
+    END -->|Sì| RETRY[Result.retry]
+    END -->|No| DONE[Result.success]
 
     subgraph AUTH [TokenAuthenticator — OkHttp]
         T401[401 ricevuto] --> RFRSH[POST /auth/refresh]
@@ -326,7 +323,7 @@ L'app punta a `http://10.0.2.2:3010/api/` (configurata in `NetworkClient.kt`).
 
 | Dato | Tecnologia | Comportamento offline |
 |------|------------|----------------------|
-| Esami | Room (SQLite) | Fonte di verità locale; sync via `pendingSync` flag + SyncWorker |
+| Esami | Room (SQLite) | Fonte di verità locale; transazioni ACID in Room e sincronizzazione tramite outbox (`action_outbox`) + SyncWorker |
 | Sessione utente | DataStore Preferences | `is_logged_in` flag persistito; cookie JWT persistito su SharedPreferences |
 | Settings profilo | DataStore Preferences | Cache post GET/PUT; fallback automatico se server non raggiungibile |
 | Cookie JWT | `PersistentCookieJar` (SharedPreferences) | Sopravvive ai riavvii; `TokenAuthenticator` gestisce il rinnovo su 401 |
@@ -347,8 +344,8 @@ L'app punta a `http://10.0.2.2:3010/api/` (configurata in `NetworkClient.kt`).
 | DataStore — preferenze chiave-valore (sessione + settings) | ✅ |
 | Jetpack Compose con LazyColumn + `key` stabile | ✅ |
 | Almeno 2 chiamate API remote | ✅ (10 endpoint implementati) |
-| WorkManager — sync background offline-first | ✅ (opzionale 3) |
-| Runtime Permissions | 🔲 (dichiarata, da implementare) |
+| Background — sync background offline-first | ✅ (opzionale 3) |
+| Runtime Permissions | ✅ |
 | Relazione scritta | ✅ (`docs/relazione/relazione.tex`) |
 
 ---
