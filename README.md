@@ -373,6 +373,14 @@ L'app punta a `http://10.0.2.2:3010/api/` (configurata in `NetworkClient.kt`).
 
 ---
 
+## Relazione Finale
+
+La relazione scritta è disponibile in `docs/relazione/`.
+
+[Scarica la relazione (PDF)](docs/relazione/relazione.pdf)
+
+---
+
 ## Licenza
 
 Progetto accademico — Università di Bologna, 2025/2026.
