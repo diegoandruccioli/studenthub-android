@@ -632,17 +632,95 @@ senza tenere l'app aperta. La notifica richiede il permesso \texttt{POST\_NOTIFI
 con il precedente riutilizzando la logica di fetch già presente nel repository.
 
 \paragraph{Soluzione}
-\texttt{LeaderboardCheckWorker} (CoroutineWorker) è schedulato in
-\texttt{CustomApplication} ogni 15 minuti con constraint \texttt{CONNECTED}
-e policy \texttt{KEEP} (nessuna schedulazione duplicata). Prima del fetch, il rank
-corrente viene letto da \texttt{RankDataStore};
-\texttt{GamificationRepositoryImpl}\texttt{.getLeaderboard()}
-aggiorna \texttt{RankDataStore} come effetto collaterale tramite \texttt{saveMyRank()}.
-Il nuovo rank viene riletto e confrontato: se cambiato (in miglioramento o
-peggioramento), viene emessa una notifica con testo differenziato ---
-``Rank migliorato!'' con indicazione della nuova posizione se
-\texttt{newRank < oldRank}, ``Rank cambiato'' con la nuova posizione se
-\texttt{newRank > oldRank}.
+Il worker \texttt{LeaderboardCheckWorker} (CoroutineWorker) viene registrato all'avvio dell'applicazione
+in \texttt{CustomApplication} con una schedulazione periodica di 15 minuti, vincolo di connettività attiva
+(\texttt{NetworkType.CONNECTED}) e policy \texttt{KEEP} per evitare duplicazioni.
+
+La logica si articola in tre livelli principali:
+\begin{enumerate}
+    \item \textbf{Recupero e Confronto del Rank}: Il worker richiama \texttt{repository.getLeaderboard()}.
+    Il repository legge il rank precedentemente memorizzato all'interno di \texttt{RankDataStore}, scarica la classifica aggiornata dal server, memorizza il nuovo rank dell'utente e lo confronta con il precedente. Se viene rilevato un cambio di posizione (\texttt{newRank != oldRank}), viene innescata la notifica.
+    
+    \item \textbf{Gestione del Canale e della Notifica}: A partire da Android 8.0 (API 26), ogni notifica richiede l'assegnazione ad un canale. La classe di utilità \texttt{NotificationUtils} si occupa di registrare il canale \texttt{gamification\_rank\_updates} con importanza elevata (\texttt{IMPORTANCE\_HIGH}), abilitando vibrazione e segnali visivi. Costruisce poi la notifica tramite \texttt{NotificationCompat.Builder} impostando:
+    \begin{itemize}
+        \item Titolo e testo dinamici: ``Rank migliorato!'' con emoji festive se la posizione è migliorata (\texttt{newRank < oldRank}), oppure ``Rank cambiato'' se è peggiorata (\texttt{newRank > oldRank}).
+        \item Priorità alta (\texttt{PRIORITY\_HIGH}) e categoria di stato (\texttt{CATEGORY\_STATUS}) per attirare l'attenzione del sistema operativo e dell'utente.
+        \item Chiusura automatica al tap (\texttt{setAutoCancel(true)}).
+    \end{itemize}
+
+    \item \textbf{Richiesta Dinamica dei Permessi (Android 13+)}: A partire da API 33, l'invio di notifiche è subordinato al consenso esplicito dell'utente tramite il permesso runtime \texttt{POST\_NOTIFICATIONS}.
+    Nella schermata \texttt{ObiettiviScreen}, all'avvio, viene controllato lo stato del permesso. Se non concesso, si verifica tramite \texttt{shouldShowRequestPermissionRationale} se mostrare un dialog informativo (Rationale Dialog) per spiegare allo studente perché è utile attivare le notifiche (monitorare i cambi di classifica). Se l'utente acconsente o se non è necessario mostrare il rationale, viene lanciato il prompt di sistema tramite un launcher Compose (\texttt{rememberLauncherForActivityResult}).
+\end{enumerate}
+
+Di seguito viene mostrata l'implementazione della classe di utilità per le notifiche, \texttt{NotificationUtils.kt}:
+
+\begin{lstlisting}
+object NotificationUtils {
+    fun showRankNotification(context: Context, newRank: Int, oldRank: Int) {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channelId = "gamification_rank_updates"
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId, 
+                "Aggiornamenti Classifica", 
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notifiche relative ai cambiamenti di posizione in classifica"
+                enableLights(true)
+                enableVibration(true)
+            }
+            manager.createNotificationChannel(channel)
+        }
+        
+        val title = if (newRank < oldRank) "Rank migliorato!" else "Rank cambiato"
+        val message = if (newRank < oldRank) {
+            "Sei salito in classifica! Ora sei al posto #$newRank 🎉"
+        } else {
+            "Sei sceso in classifica. Ora sei al posto #$newRank"
+        }
+        
+        val notification = NotificationCompat.Builder(context, channelId)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .build()
+            
+        manager.notify(System.currentTimeMillis().toInt(), notification)
+    }
+}
+\end{lstlisting}
+
+Per completezza, si riporta lo snippet relativo alla gestione della richiesta del permesso a runtime implementata in \texttt{ObiettiviScreen.kt} tramite Jetpack Compose:
+
+\begin{lstlisting}
+// Launcher per la richiesta del permesso notifiche
+val permissionLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.RequestPermission()
+) { isGranted -> /* gestione esito */ }
+
+LaunchedEffect(Unit) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val permissionStatus = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.POST_NOTIFICATIONS
+        )
+        if (permissionStatus != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(
+                    context as Activity, Manifest.permission.POST_NOTIFICATIONS
+                )
+            ) {
+                showRationaleDialog = true
+            } else {
+                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+}
+\end{lstlisting}
+
 In caso di eccezione il worker restituisce \texttt{Result.retry()} per il backoff
 automatico di WorkManager. Il permesso \texttt{POST\_NOTIFICATIONS} è richiesto
 in \texttt{ObiettiviScreen} con un dialog di rationale; l'utente può rifiutarlo
@@ -761,6 +839,71 @@ val uiState: StateFlow<GamificationUiState> = combine(
 
 Qualunque aggiornamento in una sorgente (es.\ un esame inserito che modifica XP
 o rank) si propaghi automaticamente alla UI senza refresh manuali.
+
+\section{Calcolo reattivo e offline delle statistiche di carriera}
+
+\paragraph{Problema}
+L'utente deve poter visualizzare in tempo reale e offline le statistiche relative al proprio andamento
+accademico (media ponderata, CFU totali, proiezione della base di laurea su 110) e un grafico di andamento progressivo.
+Tuttavia, il backend non restituisce il calcolo progressivo della media ponderata esame per esame (il campo
+\texttt{mediaPonderataProgressiva} viene impostato a \texttt{0.0} nel DTO della risposta).
+Se l'app dipendesse esclusivamente dal server, il grafico risulterebbe piatto e non aggiornabile offline,
+compromettendo l'usabilità dell'applicazione in assenza di connettività.
+
+\paragraph{Soluzione}
+Il problema viene risolto eseguendo il calcolo matematico in locale tramite un componente dedicato situato nel layer
+di dominio: \texttt{StatisticheCalculator}. Questo approccio isola completamente la logica matematica pura da Room e
+dal framework Android, rendendola facilmente testabile con unit test in isolamento.
+
+Il Use Case \texttt{GetStatisticheUseCase} osserva in modo reattivo il flusso di esami esposto da Room
+(\texttt{EsameRepository.getEsami()}) ed esegue il calcolo ad ogni aggiornamento della tabella locale.
+La formula matematica applicata per determinare le metriche è la seguente:
+\begin{enumerate}
+    \item \textbf{Media Ponderata ($M$)}: rappresenta il rapporto tra la somma dei voti moltiplicati per i rispettivi crediti e la somma totale dei crediti formativi universitari (CFU) sostenuti:
+    \[ M = \frac{\sum_{i=1}^{n} (\text{voto}_i \times \text{cfu}_i)}{\sum_{i=1}^{n} \text{cfu}_i} \]
+    \item \textbf{Base di Laurea ($B$)}: proietta la media ponderata in centodecimi:
+    \[ B = \frac{M \times 110.0}{30.0} \]
+    \item \textbf{Andamento Progressivo}: la lista di esami viene dapprima ordinata in ordine cronologico.
+    Scorrendo la lista ordinata, per ciascun esame viene calcolata la media ponderata cumulata fino a quel punto della carriera dello studente,
+    creando per ogni elemento un oggetto \texttt{PuntoAndamento} contenente la data, il voto e la media parziale.
+\end{enumerate}
+
+Di seguito si riporta la classe adibita al calcolo, interamente coperta da test unitari:
+
+\begin{lstlisting}
+object StatisticheCalculator {
+    fun calcola(esami: List<Esame>): Statistiche {
+        if (esami.isEmpty()) return Statistiche(0.0, 0, 0.0, emptyList())
+
+        val esamiOrdinati = esami.sortedBy { it.dataEsame }
+        var sommaProdotti = 0.0
+        var sommaCfu = 0
+        val andamento = mutableListOf<PuntoAndamento>()
+
+        esamiOrdinati.forEach { esame ->
+            sommaCfu += esame.cfu
+            sommaProdotti += esame.voto * esame.cfu
+            val mediaCorrente = if (sommaCfu > 0) sommaProdotti / sommaCfu else 0.0
+            
+            andamento.add(
+                PuntoAndamento(
+                    data = esame.dataEsame,
+                    voto = esame.voto,
+                    mediaPonderataProgressiva = mediaCorrente
+                )
+            )
+        }
+
+        val mediaFinal = if (sommaCfu > 0) sommaProdotti / sommaCfu else 0.0
+        return Statistiche(
+            mediaPonderata = mediaFinal,
+            cfuSostenuti = sommaCfu,
+            baseLaurea = (mediaFinal * 110.0) / 30.0,
+            andamentoCarriera = andamento
+        )
+    }
+}
+\end{lstlisting}
 
 \section{Rendering dichiarativo e performante del grafico carriera}
 
