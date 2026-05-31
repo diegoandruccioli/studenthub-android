@@ -585,44 +585,59 @@ when (sessionState) {
     L'utente deve poter inserire, modificare ed eliminare esami anche in assenza di connessione
     di rete. Queste operazioni offline non devono andare perse e devono essere sincronizzate
     con il server non appena la connettività torna disponibile, garantendo la consistenza dei
-    dati ed evitando problemi derivanti da aggiornamenti parziali o disallineati tra il
-    database locale e le chiamate di rete.
+    dati ed evitando duplicati o eliminazioni perse in caso di sync concorrente.
 
     \paragraph{Soluzione}
-    Il sistema adotta il \textbf{Transactional Outbox Pattern}. Invece di gestire la coda di
-    sincronizzazione direttamente tramite flag sulla tabella degli esami, viene introdotta
-    una tabella dedicata denominata \texttt{action\_outbox} e un enum \texttt{SyncStatus}
-    con i valori \texttt{PENDING}, \texttt{SYNCED} e \texttt{FAILED}.
+    La sincronizzazione è gestita tramite due flag booleani direttamente su \texttt{EsameEntity}:
+    \texttt{pendingSync} (default \texttt{true}) indica che l'esame non è ancora stato
+    confermato dal server; \texttt{pendingDelete} (default \texttt{false}) marca le
+    eliminazioni in attesa di conferma remota, nascondendo l'esame dalla UI senza
+    rimuoverlo fisicamente da Room fino al completamento del sync.
 
-    Ogni volta che l'utente esegue un'azione di inserimento, modifica o eliminazione, l'app
-    esegue due operazioni contemporaneamente: aggiorna la tabella \texttt{esami} locale e inserisce
-    la corrispondente azione di sincronizzazione nella tabella \texttt{action\_outbox}. Queste due
-    operazioni sono racchiuse all'interno di una singola transazione atomica ACID di Room.
-    Ciò garantisce la massima consistenza: non si può verificare la situazione in cui l'esame
-    locale viene salvato ma la richiesta di sincronizzazione non viene registrata (o viceversa),
-    risolvendo alla radice il rischio di inconsistenza dovuto alla scrittura separata su due
-    sistemi differenti (il database locale e la coda dei messaggi/rete).
+    \begin{lstlisting}
+@Entity(tableName = "esami")
+data class EsameEntity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    // ... campi esame ...
+    @ColumnInfo(name = "remote_id")      val remoteId: Int?     = null,
+    @ColumnInfo(name = "pending_sync")   val pendingSync: Boolean = true,
+    /** true = delete remoto pendente; nascosto in UI, in Room per retry */
+    @ColumnInfo(name = "pending_delete") val pendingDelete: Boolean = false,
+)
+    \end{lstlisting}
 
-    Le azioni inserite nell'outbox contengono il tipo di operazione (aggiunta, modifica, eliminazione)
-    e i dati dell'esame. \texttt{SyncExamsWorker} viene eseguito periodicamente in background
-    da WorkManager con vincolo di connessione di rete attiva. Il worker recupera i record
-    in stato \texttt{PENDING} dall'outbox e li elabora in sequenza cronologica:
+    Il DAO espone due query dedicate:
+    \texttt{getUnsyncedEsami()} restituisce gli esami con \texttt{pending\_sync = 1}
+    e \texttt{pending\_delete = 0};
+    \texttt{getPendingDeleteEsami()} quelli con \texttt{pending\_delete = 1} e
+    \texttt{remote\_id} non nullo.
+    La query \texttt{getAllEsami()} filtra \texttt{WHERE pending\_delete = 0}, così gli
+    esami in attesa di eliminazione non sono mai visibili nella UI già prima della
+    conferma del server.
+
+    \texttt{SyncExamsWorker} (\texttt{CoroutineWorker}) viene schedulato da WorkManager
+    ogni ora con vincolo \texttt{NetworkType.CONNECTED} e viene eseguito anche ad app
+    chiusa quando la connessione torna disponibile. Il worker processa le operazioni
+    in due fasi ordinate:
     \begin{enumerate}
-        \item Per le eliminazioni (\texttt{DELETE}), effettua la chiamata remota e in caso di successo
-        rimuove definitivamente il record locale. Se il server risponde 404, l'esame è già stato rimosso
-        e viene eliminato anche in locale.
-        \item Per inserimenti e modifiche (\texttt{ADD}/\texttt{UPDATE}), esegue le richieste POST/PUT. In caso di successo,
-        aggiorna lo stato dell'outbox a \texttt{SYNCED}.
+        \item \textbf{Delete pendenti}: per ogni esame con \texttt{pendingDelete = true},
+        chiama \texttt{DELETE /exams/:remoteId}. Sia in caso di successo sia in caso di
+        risposta 404 (esame già rimosso lato server), l'esame viene eliminato definitivamente
+        da Room. Il 404 viene trattato come successo per evitare loop infiniti.
+        \item \textbf{Add/Update pendenti}: per ogni esame con \texttt{pendingSync = true},
+        esegue \texttt{POST /exams} se \texttt{remoteId} è \texttt{null} (esame mai
+        sincronizzato) oppure \texttt{PUT /exams/:remoteId} se già noto. In caso di
+        successo, \texttt{markSynced(localId, remoteId)} aggiorna il \texttt{remoteId}
+        e azzera \texttt{pendingSync}.
     \end{enumerate}
-    In caso di fallimento della chiamata di rete per problemi temporanei, lo stato dell'azione viene
-    impostato a \texttt{FAILED} e il worker restituisce \texttt{Result.retry()}, innescando il
-    meccanismo di backoff esponenziale di WorkManager per un tentativo successivo.
+    Se almeno un'operazione riesce (\texttt{syncCount > 0}), il worker aggiorna
+    in cascata gamification e obiettivi. Se uno o più sync falliscono, restituisce
+    \texttt{Result.retry()}, attivando il backoff esponenziale di WorkManager.
 
-    Per quanto riguarda il flusso in entrata (\texttt{refreshEsami}), la sincronizzazione dal server
-    segue una politica di risoluzione dei conflitti a priorità locale: se per un determinato esame
-    è presente un record non ancora sincronizzato in \texttt{action\_outbox}, la versione locale
-    ha la precedenza e non viene sovrascritta dai dati provenienti dal server, preservando le modifiche
-    offline dell'utente.
+    Per il flusso in entrata (\texttt{refreshEsami}), la policy di risoluzione conflitti
+    privilegia la versione locale: se un esame ha \texttt{pendingSync = true}, i dati
+    provenienti dal server vengono ignorati e la versione locale non viene sovrascritta,
+    preservando le modifiche offline dell'utente.
 
     \section{Notifiche di cambio rank con LeaderboardCheckWorker}
 
@@ -1063,7 +1078,10 @@ sealed class ProfiloUiState {
         propagato automaticamente da Room tramite \texttt{Flow} fino al composable,
         senza polling né notifiche manuali.
 
-        \item \textbf{Strategia offline-first robusta}: il Transactional Outbox Pattern e la tabella \texttt{action\_outbox} garantiscono che ogni azione CRUD offline venga registrata atomicamente in Room e sincronizzata in background tramite \texttt{SyncExamsWorker} al ritorno della rete, garantendo la consistenza dei dati.
+        \item \textbf{Strategia offline-first robusta}: i flag \texttt{pendingSync} e
+        \texttt{pendingDelete} su \texttt{EsameEntity} tracciano ogni azione CRUD offline
+        direttamente in Room; \texttt{SyncExamsWorker} le sincronizza in background al ritorno
+        della rete con risoluzione dei conflitti a priorità locale.
 
         \item \textbf{Token refresh trasparente}: \texttt{TokenAuthenticator} gestisce
         il rinnovo del JWT senza che nessun ViewModel o Use Case ne sia consapevole.
@@ -1120,9 +1138,10 @@ sealed class ProfiloUiState {
         mostrare messaggi contestuali e strategie di retry differenziate nella UI.
         \item \textbf{Accessibilità}: completare i \texttt{contentDescription} su tutti
         gli elementi interattivi dei composable per il supporto agli screen reader.
-        \item \textbf{Indicizzazione Room}: aggiungere \texttt{@Index} sulla colonna
-        \texttt{remote\_id} di \texttt{EsameEntity} e sulle colonne di stato e tipo di
-        \texttt{action\_outbox}, utilizzate frequentemente per le query di filtering.
+        \item \textbf{Indicizzazione Room}: aggiungere \texttt{@Index} sulle colonne
+        \texttt{remote\_id}, \texttt{pending\_sync} e \texttt{pending\_delete} di
+        \texttt{EsameEntity}, interrogate frequentemente nelle query di filtering
+        del \texttt{SyncExamsWorker}.
     \end{itemize}
 
     \section{Sviluppi Futuri}
